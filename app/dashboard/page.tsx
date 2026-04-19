@@ -6,6 +6,7 @@ import { AppointmentCalendar } from '@/components/dashboard/AppointmentCalendar'
 import { NextAppointment } from '@/components/dashboard/NextAppointment';
 import { InsightsPanel } from '@/components/dashboard/InsightsPanel';
 import { VoiceSummary } from '@/components/dashboard/VoiceSummary';
+import { CustomerList } from '@/components/dashboard/CustomerList';
 import { ThemeProvider } from '@/components/dashboard/ThemeProvider';
 import { PalettePicker } from '@/components/dashboard/PalettePicker';
 import { ScrollToTop } from '@/components/dashboard/ScrollToTop';
@@ -59,7 +60,11 @@ async function DashboardContent() {
         <AppointmentCalendar appointments={appointments} />
       </Section>
 
-      <Section title="Tüm Randevular" delay={400}>
+      <Section title="Müşteriler" delay={400}>
+        <CustomerList appointments={appointments} />
+      </Section>
+
+      <Section title="Tüm Randevular" delay={500}>
         <div className="-mx-6 -mb-6">
           <AppointmentTable appointments={appointments} />
         </div>
