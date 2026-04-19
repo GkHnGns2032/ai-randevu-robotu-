@@ -13,8 +13,18 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const fromDate = searchParams.get('from') ?? undefined;
   const toDate = searchParams.get('to') ?? undefined;
-  const status = searchParams.get('status') as AppointmentStatus | undefined;
+  const rawStatus = searchParams.get('status');
+  const validStatuses: AppointmentStatus[] = ['confirmed', 'pending', 'cancelled'];
+  const status: AppointmentStatus | undefined =
+    rawStatus && validStatuses.includes(rawStatus as AppointmentStatus)
+      ? (rawStatus as AppointmentStatus)
+      : undefined;
 
-  const appointments = await listAppointments({ fromDate, toDate, status });
-  return NextResponse.json({ appointments });
+  try {
+    const appointments = await listAppointments({ fromDate, toDate, status });
+    return NextResponse.json({ appointments });
+  } catch (err) {
+    console.error('[appointments GET]', err);
+    return NextResponse.json({ error: 'Failed to fetch appointments' }, { status: 500 });
+  }
 }
