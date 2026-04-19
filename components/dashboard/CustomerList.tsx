@@ -1,17 +1,13 @@
 'use client';
 
 import { Appointment } from '@/lib/types';
-import { CLIENT_CONFIG } from '@/config/client';
+import { SERVICE_PRICES } from '@/lib/pricing';
 import { format, parseISO, isAfter } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { useState, useMemo } from 'react';
 import { Search, ChevronDown, ChevronUp, Phone, Calendar, TrendingUp, Star } from 'lucide-react';
 
 interface Props { appointments: Appointment[] }
-
-const SERVICE_PRICES: Record<string, number> = Object.fromEntries(
-  CLIENT_CONFIG.services.map((s) => [s.name, s.price])
-);
 
 const SVC_COLOR: Record<string, string> = {
   'Saç Kesimi': '#D4AF6E', 'Saç Boyama': '#F0A0A8', 'Manikür': '#7AB8E8',

@@ -8,19 +8,9 @@ import {
 } from 'date-fns';
 import { useEffect, useState, useRef } from 'react';
 import { TrendingUp, TrendingDown, Minus, Pencil } from 'lucide-react';
+import { SERVICE_PRICES as PRICES } from '@/lib/pricing';
 
 interface Props { appointments: Appointment[]; }
-
-const PRICES: Record<ServiceType, number> = {
-  'Saç Kesimi':    350,
-  'Saç Boyama':    950,
-  'Manikür':       280,
-  'Pedikür':       320,
-  'Kaş Tasarımı':  220,
-  'Cilt Bakımı':   650,
-  'Masaj':         500,
-  'Kalıcı Makyaj': 1600,
-};
 
 const SVC_COLORS: Record<string, string> = {
   'Saç Kesimi':    '#D4AF6E',
