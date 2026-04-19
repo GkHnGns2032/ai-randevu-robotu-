@@ -22,6 +22,12 @@ const SVC_DOT: Record<string, string> = {
 export function AppointmentTable({ appointments }: Props) {
   const [hovered, setHovered] = useState<string | null>(null);
 
+  const sorted = [...appointments].sort((a, b) => {
+    const aKey = `${a.date ?? '9999-12-31'}T${a.time ?? '23:59'}`;
+    const bKey = `${b.date ?? '9999-12-31'}T${b.time ?? '23:59'}`;
+    return aKey.localeCompare(bKey);
+  });
+
   if (appointments.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-3">
@@ -49,7 +55,7 @@ export function AppointmentTable({ appointments }: Props) {
           </tr>
         </thead>
         <tbody>
-          {appointments.map((a, i) => {
+          {sorted.map((a, i) => {
             const cfg = STATUS[a.status] ?? STATUS.pending;
             const dot = SVC_DOT[a.service] ?? '#D4AF6E';
             const isHov = hovered === a.id;

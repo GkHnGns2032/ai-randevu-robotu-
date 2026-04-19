@@ -1,8 +1,17 @@
 // lib/calendar.ts
 import { google } from 'googleapis';
-import { format, addMinutes, parseISO } from 'date-fns';
+import { addMinutes, parseISO } from 'date-fns';
 import { TimeSlot, WORKING_HOURS } from './types';
 import { CLIENT_CONFIG } from '@/config/client';
+
+function formatIstanbulTime(date: Date): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Istanbul',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+}
 
 function getCalendarClient() {
   const auth = new google.auth.OAuth2(
@@ -51,7 +60,7 @@ export async function getAvailableSlots(
 
     slots.push({
       date,
-      time: format(cursor, 'HH:mm'),
+      time: formatIstanbulTime(cursor),
       available: !isBlocked,
     });
 
@@ -70,7 +79,7 @@ export async function findNextAvailableSlots(
   let checkDate = new Date(fromDate);
 
   while (results.length < count) {
-    const dateStr = format(checkDate, 'yyyy-MM-dd');
+    const dateStr = checkDate.toISOString().split('T')[0];
     const dayOfWeek = checkDate.getDay();
 
     if (CLIENT_CONFIG.workingHours.workingDays.includes(dayOfWeek)) {
