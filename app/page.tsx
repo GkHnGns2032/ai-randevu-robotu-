@@ -1,5 +1,6 @@
 import { ChatInterface } from '@/components/chat/ChatInterface';
 import { Scissors, Star, Clock, Shield } from 'lucide-react';
+import { SignedIn } from '@clerk/nextjs';
 
 const FEATURES = [
   { icon: Clock, text: '7/24 Randevu Alma' },
@@ -40,7 +41,7 @@ export default function HomePage() {
 
         {/* Chat */}
         <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-3xl shadow-xl overflow-hidden" style={{ height: '580px' }}>
+          <div className="bg-white rounded-3xl shadow-xl overflow-hidden h-[580px]">
             {/* Chat header */}
             <div className="bg-gradient-to-r from-rose-500 to-pink-600 p-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-lg">
@@ -57,10 +58,13 @@ export default function HomePage() {
             <ChatInterface />
           </div>
           <p className="text-center text-xs text-gray-400 mt-4">
-            © 2026 Bella Güzellik Salonu ·{' '}
-            <a href="/dashboard" className="hover:text-gray-600 transition-colors">
-              Admin Paneli
-            </a>
+            © 2026 Bella Güzellik Salonu
+            <SignedIn>
+              {' '}·{' '}
+              <a href="/dashboard" className="hover:text-gray-600 transition-colors">
+                Admin Paneli
+              </a>
+            </SignedIn>
           </p>
         </div>
       </div>
