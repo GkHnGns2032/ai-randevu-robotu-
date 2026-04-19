@@ -52,13 +52,13 @@ export default function DashboardPage() {
               <p className="text-xs text-gray-400">Admin Dashboard</p>
             </div>
           </div>
-          <UserButton afterSignOutUrl="/" />
+          <UserButton />
         </div>
       </header>
 
       {/* Main */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Suspense fallback={<div className="text-gray-400 text-sm">Yükleniyor...</div>}>
+        <Suspense fallback={<div className="h-96 flex items-center justify-center text-gray-400 text-sm">Yükleniyor...</div>}>
           <DashboardContent />
         </Suspense>
       </main>
