@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { APPOINTMENT_TOOLS, SYSTEM_PROMPT } from '@/lib/ai-tools';
 import { getAvailableSlots, findNextAvailableSlots, createCalendarEvent, deleteCalendarEvent } from '@/lib/calendar';
 import { createAppointment, findAppointmentsByPhone, cancelAppointment, rescheduleAppointment } from '@/lib/airtable';
+import { isSlotStillAvailable } from '@/lib/booking-lock';
 import { SERVICE_DURATIONS, ServiceType } from '@/lib/types';
 
 // I3 — Env var guard at module level
@@ -75,6 +76,20 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
   if (toolName === 'book_appointment') {
     const service = toolInput.service as ServiceType;
     const duration = SERVICE_DURATIONS[service] ?? 60;
+
+    // Race condition double-check — slot hâlâ boş mu?
+    try {
+      const stillFree = await isSlotStillAvailable(toolInput.date, toolInput.time, duration);
+      if (!stillFree) {
+        return JSON.stringify({
+          success: false,
+          error: 'conflict',
+          message: 'Üzgünüm, bu slot biraz önce başka biri tarafından alındı. Lütfen başka bir saat seçin.',
+        });
+      }
+    } catch (lockErr) {
+      console.error('[book_appointment] Slot doğrulama hatası (devam ediliyor):', lockErr);
+    }
 
     // Google Calendar — hata olsa bile devam et
     let eventId: string | undefined;
@@ -148,6 +163,26 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
   if (toolName === 'reschedule_appointment') {
     const service = toolInput.service as ServiceType;
     const duration = SERVICE_DURATIONS[service] ?? 60;
+
+    // Race condition double-check — yeni slot hâlâ boş mu? (mevcut randevu hariç)
+    try {
+      const stillFree = await isSlotStillAvailable(
+        toolInput.new_date,
+        toolInput.new_time,
+        duration,
+        toolInput.appointment_id,
+      );
+      if (!stillFree) {
+        return JSON.stringify({
+          success: false,
+          error: 'conflict',
+          message: 'Üzgünüm, seçtiğiniz yeni saat biraz önce başka biri tarafından alındı. Lütfen başka bir saat seçin.',
+        });
+      }
+    } catch (lockErr) {
+      console.error('[reschedule_appointment] Slot doğrulama hatası (devam ediliyor):', lockErr);
+    }
+
     let newEventId: string | undefined;
     try {
       if (toolInput.old_google_calendar_event_id) {
