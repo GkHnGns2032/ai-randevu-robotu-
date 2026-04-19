@@ -7,6 +7,10 @@ const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY! })
 
 const table = base(process.env.AIRTABLE_TABLE_NAME!);
 
+function escapeFormulaString(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
 function recordToAppointment(record: Airtable.Record<Airtable.FieldSet>): Appointment {
   const f = record.fields as Record<string, unknown>;
   return {
@@ -48,13 +52,13 @@ export async function listAppointments(options?: {
   const filterParts: string[] = [];
 
   if (options?.fromDate) {
-    filterParts.push(`IS_AFTER({date}, "${options.fromDate}")`);
+    filterParts.push(`IS_AFTER({date}, "${escapeFormulaString(options.fromDate)}")`);
   }
   if (options?.toDate) {
-    filterParts.push(`IS_BEFORE({date}, "${options.toDate}")`);
+    filterParts.push(`IS_BEFORE({date}, "${escapeFormulaString(options.toDate)}")`);
   }
   if (options?.status) {
-    filterParts.push(`{status} = "${options.status}"`);
+    filterParts.push(`{status} = "${escapeFormulaString(options.status)}"`);
   }
 
   const filterByFormula =
@@ -77,7 +81,7 @@ export async function listAppointments(options?: {
 export async function getAppointmentsByDate(date: string): Promise<Appointment[]> {
   const records = await table
     .select({
-      filterByFormula: `{date} = "${date}"`,
+      filterByFormula: `{date} = "${escapeFormulaString(date)}"`,
       sort: [{ field: 'time', direction: 'asc' }],
     })
     .all();
@@ -85,9 +89,13 @@ export async function getAppointmentsByDate(date: string): Promise<Appointment[]
 }
 
 export async function findAppointmentsByPhone(phone: string): Promise<Appointment[]> {
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length < 10 || cleaned.length > 15) {
+    return [];
+  }
   const records = await table
     .select({
-      filterByFormula: `AND({customerPhone} = "${phone}", {status} != "cancelled")`,
+      filterByFormula: `AND({customerPhone} = "${escapeFormulaString(phone)}", {status} != "cancelled")`,
       sort: [{ field: 'date', direction: 'asc' }, { field: 'time', direction: 'asc' }],
     })
     .all();
