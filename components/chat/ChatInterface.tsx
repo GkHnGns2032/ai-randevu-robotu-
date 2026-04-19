@@ -21,6 +21,23 @@ export function ChatInterface() {
   const lastMsgRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const saved = localStorage.getItem('bella-chat-history');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as ChatMessage[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed.map((m) => ({ ...m, timestamp: new Date(m.timestamp) })));
+        }
+      } catch { /* ignore */ }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (messages.length <= 1) return;
+    localStorage.setItem('bella-chat-history', JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
     const last = messages[messages.length - 1];
@@ -72,6 +89,19 @@ export function ChatInterface() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-gray-50">
+      {messages.length > 1 && (
+        <div className="flex justify-end px-4 pt-2">
+          <button
+            onClick={() => {
+              setMessages([INITIAL_MESSAGE]);
+              localStorage.removeItem('bella-chat-history');
+            }}
+            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            Yeni Sohbet
+          </button>
+        </div>
+      )}
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-6">
         {messages.map((m, i) => {
           const isLast = i === messages.length - 1;
