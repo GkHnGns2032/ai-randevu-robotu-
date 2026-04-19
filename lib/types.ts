@@ -2,6 +2,8 @@
 import { CLIENT_CONFIG, ServiceName } from '@/config/client';
 
 export type AppointmentStatus = 'confirmed' | 'pending' | 'cancelled';
+export type PaymentStatus = 'unpaid' | 'partial' | 'paid';
+export type PaymentMethod = 'cash' | 'card' | 'transfer';
 
 export type ServiceType = ServiceName;
 
@@ -17,6 +19,9 @@ export interface Appointment {
   notes?: string;
   createdAt: string;   // ISO 8601 datetime
   isNoShow?: boolean;
+  paymentStatus?: PaymentStatus;
+  paymentMethod?: PaymentMethod;
+  paidAmount?: number;
 }
 
 export interface ChatMessage {

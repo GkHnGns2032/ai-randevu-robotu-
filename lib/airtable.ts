@@ -1,6 +1,6 @@
 // lib/airtable.ts
 import Airtable from 'airtable';
-import { Appointment, ServiceType, AppointmentStatus } from './types';
+import { Appointment, ServiceType, AppointmentStatus, PaymentStatus, PaymentMethod } from './types';
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY! })
   .base(process.env.AIRTABLE_BASE_ID!);
@@ -25,6 +25,9 @@ function recordToAppointment(record: Airtable.Record<Airtable.FieldSet>): Appoin
     notes: f.notes as string | undefined,
     createdAt: f.createdAt as string,
     isNoShow: Boolean(f.isNoShow),
+    paymentStatus: (f.paymentStatus as PaymentStatus) || undefined,
+    paymentMethod: (f.paymentMethod as PaymentMethod) || undefined,
+    paidAmount: (f.paidAmount as number) || undefined,
   };
 }
 

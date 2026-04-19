@@ -1,6 +1,7 @@
 'use client';
 
 import { Appointment } from '@/lib/types';
+import { PaymentBadge } from './PaymentBadge';
 import { format, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { useState } from 'react';
@@ -124,7 +125,7 @@ export function AppointmentTable({ appointments }: Props) {
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               <th className="text-left py-3 px-5 text-[10px] font-medium tracking-[0.14em] uppercase w-8" style={{ color: 'var(--text-3)' }}>#</th>
-              {['Müşteri', 'Hizmet', 'Tarih & Saat', 'Süre', 'Durum', 'İşlem'].map((h) => (
+              {['Müşteri', 'Hizmet', 'Tarih & Saat', 'Süre', 'Durum', 'Ödeme', 'İşlem'].map((h) => (
                 <th key={h} className="text-left py-3 px-4 text-[10px] font-medium tracking-[0.14em] uppercase" style={{ color: 'var(--text-3)' }}>
                   {h}
                 </th>
@@ -134,7 +135,7 @@ export function AppointmentTable({ appointments }: Props) {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center">
+                <td colSpan={8} className="py-12 text-center">
                   <p className="text-xs tracking-widest uppercase" style={{ color: 'var(--text-3)' }}>Sonuç bulunamadı</p>
                 </td>
               </tr>
@@ -194,6 +195,9 @@ export function AppointmentTable({ appointments }: Props) {
                     >
                       {cfg.label}
                     </span>
+                  </td>
+                  <td className="py-4 px-4">
+                    <PaymentBadge status={a.paymentStatus} />
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">

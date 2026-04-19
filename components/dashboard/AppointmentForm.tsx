@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CLIENT_CONFIG } from '@/config/client';
 import { X } from 'lucide-react';
-import type { Appointment, ServiceType } from '@/lib/types';
+import type { Appointment, ServiceType, PaymentStatus, PaymentMethod } from '@/lib/types';
 
 interface Props {
   appointment?: Appointment;
@@ -19,6 +19,9 @@ export function AppointmentForm({ appointment, onClose, onSaved }: Props) {
     date: appointment?.date ?? '',
     time: appointment?.time ?? '',
     notes: appointment?.notes ?? '',
+    paymentStatus: (appointment?.paymentStatus ?? 'unpaid') as PaymentStatus,
+    paymentMethod: (appointment?.paymentMethod ?? '') as PaymentMethod | '',
+    paidAmount: appointment?.paidAmount?.toString() ?? '',
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -32,7 +35,11 @@ export function AppointmentForm({ appointment, onClose, onSaved }: Props) {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          paidAmount: form.paidAmount ? Number(form.paidAmount) : undefined,
+          paymentMethod: form.paymentMethod || undefined,
+        }),
       });
       if (!res.ok) throw new Error(await res.text());
       onSaved();
@@ -75,6 +82,48 @@ export function AppointmentForm({ appointment, onClose, onSaved }: Props) {
             <Field label="Saat" type="time" value={form.time} onChange={(v) => setForm({ ...form, time: v })} />
           </div>
           <Field label="Notlar" value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} />
+
+          {/* Ödeme */}
+          <div className="pt-1" style={{ borderTop: '1px solid var(--border)' }}>
+            <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: 'var(--text-3)' }}>Ödeme</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>Durum</label>
+                <select
+                  value={form.paymentStatus}
+                  onChange={(e) => setForm({ ...form, paymentStatus: e.target.value as PaymentStatus })}
+                  className="w-full mt-1 px-3 py-2 rounded-lg text-sm"
+                  style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
+                >
+                  <option value="unpaid">Ödenmedi</option>
+                  <option value="partial">Kısmen Ödendi</option>
+                  <option value="paid">Ödendi</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>Yöntem</label>
+                <select
+                  value={form.paymentMethod}
+                  onChange={(e) => setForm({ ...form, paymentMethod: e.target.value as PaymentMethod | '' })}
+                  className="w-full mt-1 px-3 py-2 rounded-lg text-sm"
+                  style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
+                >
+                  <option value="">—</option>
+                  <option value="cash">Nakit</option>
+                  <option value="card">Kart</option>
+                  <option value="transfer">Havale</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-3">
+              <Field
+                label="Ödenen Tutar (₺)"
+                type="number"
+                value={form.paidAmount}
+                onChange={(v) => setForm({ ...form, paidAmount: v })}
+              />
+            </div>
+          </div>
         </div>
         {err && <p className="text-xs mt-3" style={{ color: 'var(--rose)' }}>{err}</p>}
         <button

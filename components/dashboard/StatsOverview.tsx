@@ -539,6 +539,59 @@ function ServiceBreakdown({ data }: { data: { service: string; count: number; re
   );
 }
 
+/* ── Payment Summary ─────────────────────────────────────────── */
+function PaymentSummary({ collected, pending }: { collected: number; pending: number }) {
+  const collectedCount = useCountUp(collected, 300);
+  const pendingCount   = useCountUp(pending,   500);
+  const total = collected + pending;
+  const pct = total > 0 ? Math.round((collected / total) * 100) : 0;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setTimeout(() => setMounted(true), 400); }, []);
+
+  return (
+    <div className="px-7 py-6">
+      <p className="text-[9px] tracking-[0.24em] uppercase font-semibold mb-5" style={{ color: 'var(--text-3)' }}>
+        Ödeme Durumu
+      </p>
+      <div className="space-y-3.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-2 h-2 rounded-full" style={{ background: 'var(--mint)' }} />
+            <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>Tahsil Edilen</span>
+          </div>
+          <span className="tabular-nums" style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '1.15rem', color: 'var(--mint)', fontWeight: 400 }}>
+            ₺{fmt(collectedCount)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-2 h-2 rounded-full" style={{ background: 'var(--rose)' }} />
+            <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>Bekleyen</span>
+          </div>
+          <span className="tabular-nums" style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '1.15rem', color: 'var(--rose)', fontWeight: 400 }}>
+            ₺{fmt(pendingCount)}
+          </span>
+        </div>
+        <div className="relative h-[3px] rounded-full overflow-hidden" style={{ background: 'var(--bg-hover)' }}>
+          <div
+            className="absolute left-0 top-0 h-full rounded-full"
+            style={{
+              width: mounted ? `${pct}%` : '0%',
+              background: 'linear-gradient(90deg, var(--mint)80, var(--mint))',
+              boxShadow: '0 0 8px var(--mint)70',
+              transition: 'width 1s cubic-bezier(0.16,1,0.3,1)',
+            }}
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--mint)' }}>%{pct} tahsil</span>
+          <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>₺{fmt(total)} toplam</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Bottom stat columns ─────────────────────────────────────── */
 const APPT_STATS = [
   { key: 'today', label: 'Bugün',    sub: 'randevu', color: '#D4AF6E' },
@@ -662,6 +715,15 @@ export function StatsOverview({ appointments }: Props) {
     total: confirmed.length,
   };
 
+  const allAppts = appointments.filter((a) => a.status === 'confirmed');
+  const collected = allAppts.reduce((s, a) => s + (a.paidAmount ?? 0), 0);
+  const pending = allAppts
+    .filter((a) => a.paymentStatus !== 'paid')
+    .reduce((s, a) => {
+      const price = PRICES[a.service as ServiceType] ?? 0;
+      return s + (price - (a.paidAmount ?? 0));
+    }, 0);
+
   return (
     <>
       <style>{KEYFRAMES}</style>
@@ -713,6 +775,11 @@ export function StatsOverview({ appointments }: Props) {
 
         {/* 3 — Service breakdown */}
         <ServiceBreakdown data={serviceRevenue} />
+
+        <GoldDivider />
+
+        {/* 4 — Payment summary */}
+        <PaymentSummary collected={collected} pending={Math.max(pending, 0)} />
 
         <GoldDivider />
 
