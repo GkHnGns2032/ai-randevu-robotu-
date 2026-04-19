@@ -5,13 +5,13 @@ import { NextResponse } from 'next/server';
 import { listAppointments, markReminderSent } from '@/lib/airtable';
 import { sendSMS, buildReminderMessage } from '@/lib/sms';
 
-function istanbulNowParts(): { dateStr: string; msInIstanbul: number } {
+function istanbulNowParts(): { dateStr: string; nowMs: number } {
   const now = new Date();
   const dateStr = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Europe/Istanbul',
     year: 'numeric', month: '2-digit', day: '2-digit',
   }).format(now);
-  return { dateStr, msInIstanbul: now.getTime() };
+  return { dateStr, nowMs: now.getTime() };
 }
 
 function istanbulApptMs(date: string, time: string): number {
@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { dateStr: today, msInIstanbul: nowMs } = istanbulNowParts();
+  const { dateStr: today, nowMs } = istanbulNowParts();
   const targetMs = nowMs + 2 * 60 * 60 * 1000;
   const windowMs = 20 * 60 * 1000;
 
