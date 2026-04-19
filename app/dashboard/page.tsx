@@ -4,6 +4,7 @@ import { StatsOverview } from '@/components/dashboard/StatsOverview';
 import { AppointmentTable } from '@/components/dashboard/AppointmentTable';
 import { AppointmentCalendar } from '@/components/dashboard/AppointmentCalendar';
 import { NextAppointment } from '@/components/dashboard/NextAppointment';
+import { InsightsPanel } from '@/components/dashboard/InsightsPanel';
 import { ThemeProvider } from '@/components/dashboard/ThemeProvider';
 import { PalettePicker } from '@/components/dashboard/PalettePicker';
 import { ScrollToTop } from '@/components/dashboard/ScrollToTop';
@@ -46,11 +47,15 @@ async function DashboardContent() {
         <StatsOverview appointments={appointments} />
       </div>
 
-      <Section title="Haftalık Takvim" delay={200}>
+      <Section title="Akıllı Analiz" delay={200}>
+        <InsightsPanel />
+      </Section>
+
+      <Section title="Haftalık Takvim" delay={300}>
         <AppointmentCalendar appointments={appointments} />
       </Section>
 
-      <Section title="Tüm Randevular" delay={300}>
+      <Section title="Tüm Randevular" delay={400}>
         <div className="-mx-6 -mb-6">
           <AppointmentTable appointments={appointments} />
         </div>
