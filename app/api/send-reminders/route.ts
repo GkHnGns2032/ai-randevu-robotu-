@@ -4,7 +4,19 @@
 import { NextResponse } from 'next/server';
 import { listAppointments, markReminderSent } from '@/lib/airtable';
 import { sendSMS, buildReminderMessage } from '@/lib/sms';
-import { format } from 'date-fns';
+
+function istanbulNowParts(): { dateStr: string; msInIstanbul: number } {
+  const now = new Date();
+  const dateStr = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Istanbul',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(now);
+  return { dateStr, msInIstanbul: now.getTime() };
+}
+
+function istanbulApptMs(date: string, time: string): number {
+  return new Date(`${date}T${time}:00+03:00`).getTime();
+}
 
 export async function GET(req: Request) {
   const secret = new URL(req.url).searchParams.get('secret');
@@ -12,11 +24,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const now = new Date();
-  const today = format(now, 'yyyy-MM-dd');
-
-  // Şu anki saat + 2 saat (±20 dakika tolerans)
-  const targetMs = now.getTime() + 2 * 60 * 60 * 1000;
+  const { dateStr: today, msInIstanbul: nowMs } = istanbulNowParts();
+  const targetMs = nowMs + 2 * 60 * 60 * 1000;
   const windowMs = 20 * 60 * 1000;
 
   const appointments = await listAppointments();
@@ -24,9 +33,7 @@ export async function GET(req: Request) {
     if (a.date !== today) return false;
     if (a.status !== 'confirmed') return false;
     if ((a as unknown as Record<string, unknown>).reminderSent) return false;
-
-    const [h, m] = a.time.split(':').map(Number);
-    const apptMs = new Date(a.date).setHours(h, m, 0, 0);
+    const apptMs = istanbulApptMs(a.date, a.time);
     return Math.abs(apptMs - targetMs) <= windowMs;
   });
 
