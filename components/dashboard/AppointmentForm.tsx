@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CLIENT_CONFIG } from '@/config/client';
 import { X } from 'lucide-react';
 import type { Appointment, ServiceType } from '@/lib/types';
@@ -42,9 +43,13 @@ export function AppointmentForm({ appointment, onClose, onSaved }: Props) {
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
-      <div className="relative w-full max-w-md rounded-2xl p-6" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+  const modal = (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="relative w-full max-w-md rounded-2xl p-6 overflow-y-auto max-h-[90vh]" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
         <button onClick={onClose} className="absolute top-4 right-4" style={{ color: 'var(--text-3)' }}>
           <X size={18} />
         </button>
@@ -83,6 +88,7 @@ export function AppointmentForm({ appointment, onClose, onSaved }: Props) {
       </div>
     </div>
   );
+  return createPortal(modal, document.body);
 }
 
 function Field({ label, value, onChange, type = 'text' }: { label: string; value: string; onChange: (v: string) => void; type?: string }) {

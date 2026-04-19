@@ -98,6 +98,14 @@ export function AppointmentTable({ appointments }: Props) {
           <option value="pending">Bekliyor</option>
           <option value="cancelled">İptal</option>
         </select>
+        <a
+          href="/api/export"
+          download
+          className="ml-auto px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
+          style={{ background: 'var(--gold)', color: '#fff' }}
+        >
+          CSV İndir
+        </a>
       </div>
 
       <div className="overflow-x-auto">

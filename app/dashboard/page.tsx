@@ -163,20 +163,19 @@ export default function DashboardPage() {
       {/* Main */}
       <main className="max-w-7xl mx-auto px-6 py-10">
         {/* Page heading */}
-        <div className="mb-8 anim-up">
-          <div className="flex items-baseline gap-4">
+        <div className="mb-8 anim-up flex items-center justify-between gap-4">
+          <div>
             <h1
               className="font-light leading-tight"
               style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: 'clamp(2rem, 4vw, 3rem)' }}
             >
               <span className="gold-shimmer">Randevu Yönetimi</span>
             </h1>
-            <div className="h-px flex-1 max-w-xs hidden md:block" style={{ background: 'linear-gradient(90deg, var(--border-gold), transparent)', marginBottom: 8 }} />
-            <NewAppointmentButton />
+            <p className="text-xs tracking-wider mt-1" style={{ color: 'var(--text-3)' }}>
+              Bella Güzellik Salonu · Genel Bakış
+            </p>
           </div>
-          <p className="text-xs tracking-wider mt-1" style={{ color: 'var(--text-3)' }}>
-            Bella Güzellik Salonu · Genel Bakış
-          </p>
+          <NewAppointmentButton />
         </div>
 
         <Suspense
