@@ -67,40 +67,40 @@ export function AppointmentTable({ appointments }: Props) {
 
   return (
     <>
-      <div className="overflow-x-auto">
-        {/* Filtreler */}
-        <div className="px-5 py-3 flex flex-wrap gap-3 items-center" style={{ borderBottom: '1px solid var(--border)' }}>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Ara: isim, telefon, hizmet..."
-            className="flex-1 min-w-[200px] px-3 py-1.5 rounded-lg text-sm"
-            style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
-          />
-          <select
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value as typeof dateFilter)}
-            className="px-3 py-1.5 rounded-lg text-sm"
-            style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
-          >
-            <option value="upcoming">Yaklaşan</option>
-            <option value="today">Bugün</option>
-            <option value="past">Geçmiş</option>
-            <option value="all">Hepsi</option>
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-            className="px-3 py-1.5 rounded-lg text-sm"
-            style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
-          >
-            <option value="all">Tüm Durumlar</option>
-            <option value="confirmed">Onaylı</option>
-            <option value="pending">Bekliyor</option>
-            <option value="cancelled">İptal</option>
-          </select>
-        </div>
+      {/* Filtreler — overflow-x-auto dışında, select'ler kesilmesin */}
+      <div className="px-5 py-3 flex flex-wrap gap-3 items-center" style={{ borderBottom: '1px solid var(--border)' }}>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Ara: isim, telefon, hizmet..."
+          className="flex-1 min-w-[200px] px-3 py-1.5 rounded-lg text-sm"
+          style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
+        />
+        <select
+          value={dateFilter}
+          onChange={(e) => setDateFilter(e.target.value as typeof dateFilter)}
+          className="px-3 py-1.5 rounded-lg text-sm"
+          style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
+        >
+          <option value="upcoming">Yaklaşan</option>
+          <option value="today">Bugün</option>
+          <option value="past">Geçmiş</option>
+          <option value="all">Hepsi</option>
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+          className="px-3 py-1.5 rounded-lg text-sm"
+          style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
+        >
+          <option value="all">Tüm Durumlar</option>
+          <option value="confirmed">Onaylı</option>
+          <option value="pending">Bekliyor</option>
+          <option value="cancelled">İptal</option>
+        </select>
+      </div>
 
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
@@ -186,7 +186,7 @@ export function AppointmentTable({ appointments }: Props) {
             })}
           </tbody>
         </table>
-      </div>
+      </div>{/* overflow-x-auto */}
 
       {editing && (
         <AppointmentForm
