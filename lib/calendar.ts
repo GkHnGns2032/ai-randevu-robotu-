@@ -19,14 +19,17 @@ export async function getAvailableSlots(
   const calendar = getCalendarClient();
   const calendarId = process.env.GOOGLE_CALENDAR_ID!;
 
-  const dayStart = new Date(`${date}T0${WORKING_HOURS.start}:00:00`);
-  const dayEnd = new Date(`${date}T${WORKING_HOURS.end}:00:00`);
+  const startHour = String(WORKING_HOURS.start).padStart(2, '0');
+  const endHour = String(WORKING_HOURS.end).padStart(2, '0');
+  const dayStart = new Date(`${date}T${startHour}:00:00+03:00`);
+  const dayEnd = new Date(`${date}T${endHour}:00:00+03:00`);
 
   const { data } = await calendar.freebusy.query({
     requestBody: {
       timeMin: dayStart.toISOString(),
       timeMax: dayEnd.toISOString(),
       items: [{ id: calendarId }],
+      timeZone: 'Europe/Istanbul',
     },
   });
 
