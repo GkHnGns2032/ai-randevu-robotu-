@@ -18,6 +18,8 @@ export function StaffManager() {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [newStaff, setNewStaff] = useState<{ name: string; role: string; services: string[] }>({
     name: '',
     role: '',
@@ -41,34 +43,55 @@ export function StaffManager() {
 
   async function handleCreate() {
     if (!newStaff.name.trim()) return;
-    const res = await fetch('/api/staff', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...newStaff, active: true }),
-    });
-    if (res.ok) {
-      setNewStaff({ name: '', role: '', services: [] });
-      setAdding(false);
-      load();
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...newStaff, active: true }),
+      });
+      if (res.ok) {
+        setNewStaff({ name: '', role: '', services: [] });
+        setAdding(false);
+        load();
+      } else {
+        const data = await res.json().catch(() => ({ error: 'Bilinmeyen hata' }));
+        setError(data.error || 'Kayıt başarısız.');
+      }
+    } finally {
+      setSaving(false);
     }
   }
 
   async function handleToggleActive(s: Staff) {
-    await fetch('/api/staff', {
+    setError(null);
+    const res = await fetch('/api/staff', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: s.id, active: !s.active }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ error: 'Bilinmeyen hata' }));
+      setError(data.error || 'Güncelleme başarısız.');
+      return;
+    }
     load();
   }
 
   async function handleDelete(id: string) {
     if (!confirm('Bu personeli silmek istediğine emin misin?')) return;
-    await fetch('/api/staff', {
+    setError(null);
+    const res = await fetch('/api/staff', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ error: 'Bilinmeyen hata' }));
+      setError(data.error || 'Silme başarısız.');
+      return;
+    }
     load();
   }
 
@@ -182,13 +205,26 @@ export function StaffManager() {
             </button>
             <button
               onClick={handleCreate}
-              disabled={!newStaff.name.trim()}
+              disabled={!newStaff.name.trim() || saving}
               className="px-3 py-1.5 rounded-lg text-xs transition-opacity hover:opacity-80 disabled:opacity-40"
               style={{ background: 'var(--gold)', color: '#fff' }}
             >
-              Kaydet
+              {saving ? 'Kaydediliyor...' : 'Kaydet'}
             </button>
           </div>
+        </div>
+      )}
+
+      {error && (
+        <div
+          className="rounded-xl p-3 mb-4 text-xs anim-up"
+          style={{
+            background: 'rgba(240,160,168,0.1)',
+            border: '1px solid var(--rose)',
+            color: 'var(--rose)',
+          }}
+        >
+          {error}
         </div>
       )}
 

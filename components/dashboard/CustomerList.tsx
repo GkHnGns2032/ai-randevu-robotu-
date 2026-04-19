@@ -90,6 +90,7 @@ export function CustomerList({ appointments }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('totalVisits');
   const [sortAsc, setSortAsc] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [listOpen, setListOpen] = useState(false);
   const [notes, setNotes] = useState<Record<string, CustomerNote[]>>({});
   const [noteLoading, setNoteLoading] = useState<string | null>(null);
   const [newNote, setNewNote] = useState('');
@@ -195,23 +196,47 @@ export function CustomerList({ appointments }: Props) {
         ))}
       </div>
 
+      {/* Toggle button */}
+      <button
+        onClick={() => setListOpen((p) => !p)}
+        className="w-full mb-4 flex items-center justify-between px-4 py-2.5 rounded-xl text-sm transition-colors hover:opacity-80"
+        style={{
+          background: 'var(--bg-hover)',
+          border: '1px solid var(--border)',
+          color: 'var(--text-2)',
+        }}
+      >
+        <span className="flex items-center gap-2">
+          <span className="text-[10px] tracking-[0.16em] uppercase" style={{ color: 'var(--text-3)' }}>
+            {listOpen ? 'Listeyi Gizle' : 'Tüm Listeyi Göster'}
+          </span>
+          <span className="tabular-nums text-xs" style={{ color: 'var(--text-3)' }}>
+            ({totalCustomers} müşteri)
+          </span>
+        </span>
+        {listOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+      </button>
+
       {/* Search */}
-      <div className="relative mb-4">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="İsim veya telefon ara..."
-          className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none"
-          style={{
-            background: 'var(--bg-hover)',
-            border: '1px solid var(--border)',
-            color: 'var(--text-1)',
-          }}
-        />
-      </div>
+      {listOpen && (
+        <div className="relative mb-4">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="İsim veya telefon ara..."
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none"
+            style={{
+              background: 'var(--bg-hover)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-1)',
+            }}
+          />
+        </div>
+      )}
 
       {/* Table */}
+      {listOpen && (
       <div className="overflow-x-auto -mx-6">
         <table className="w-full text-sm">
           <thead>
@@ -465,6 +490,7 @@ export function CustomerList({ appointments }: Props) {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
