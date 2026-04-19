@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { Appointment } from '@/lib/types';
 import { SERVICE_PRICES } from '@/lib/pricing';
 import { format, parseISO, isAfter } from 'date-fns';
@@ -190,9 +191,8 @@ export function CustomerList({ appointments }: Props) {
               const customerAppts = appointments.filter((a) => a.customerPhone === c.phone);
 
               return (
-                <>
+                <React.Fragment key={c.phone}>
                   <tr
-                    key={c.phone}
                     onClick={() => setExpanded(isExpanded ? null : c.phone)}
                     className="anim-up cursor-pointer"
                     style={{
@@ -271,7 +271,7 @@ export function CustomerList({ appointments }: Props) {
 
                   {/* Expanded detail */}
                   {isExpanded && (
-                    <tr key={`${c.phone}-detail`}>
+                    <tr>
                       <td colSpan={5} style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-hover)' }}>
                         <div className="px-4 pb-4">
                           <p className="text-[10px] tracking-[0.16em] uppercase mb-2" style={{ color: 'var(--text-3)' }}>
@@ -314,7 +314,7 @@ export function CustomerList({ appointments }: Props) {
                       </td>
                     </tr>
                   )}
-                </>
+                </React.Fragment>
               );
             })}
           </tbody>
