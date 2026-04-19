@@ -2,6 +2,7 @@
 import { google } from 'googleapis';
 import { format, addMinutes, parseISO } from 'date-fns';
 import { TimeSlot, WORKING_HOURS } from './types';
+import { CLIENT_CONFIG } from '@/config/client';
 
 function getCalendarClient() {
   const auth = new google.auth.OAuth2(
@@ -72,7 +73,7 @@ export async function findNextAvailableSlots(
     const dateStr = format(checkDate, 'yyyy-MM-dd');
     const dayOfWeek = checkDate.getDay();
 
-    if (dayOfWeek !== 0) {
+    if (CLIENT_CONFIG.workingHours.workingDays.includes(dayOfWeek)) {
       const slots = await getAvailableSlots(dateStr, durationMinutes);
       const available = slots.filter((s) => s.available);
       results.push(...available.slice(0, count - results.length));

@@ -3,11 +3,14 @@ import { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '@/lib/types';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
+import { CLIENT_CONFIG } from '@/config/client';
+
+const { assistantName, businessName, welcomeEmoji } = CLIENT_CONFIG;
 
 const INITIAL_MESSAGE: ChatMessage = {
   id: 'initial',
   role: 'assistant',
-  content: 'Merhaba! Ben Bella, Bella Güzellik Salonu\'nun randevu asistanıyım. 💇‍♀️\n\nSize nasıl yardımcı olabilirim? Hangi hizmetimizden yararlanmak istersiniz?',
+  content: `Merhaba! Ben ${assistantName}, ${businessName}'nun randevu asistanıyım. ${welcomeEmoji}\n\nSize nasıl yardımcı olabilirim? Hangi hizmetimizden yararlanmak istersiniz?`,
   timestamp: new Date(),
 };
 

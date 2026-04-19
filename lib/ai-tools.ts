@@ -1,5 +1,14 @@
 // lib/ai-tools.ts
 import Anthropic from '@anthropic-ai/sdk';
+import { CLIENT_CONFIG } from '@/config/client';
+
+const { businessName, assistantName, services, workingHours } = CLIENT_CONFIG;
+
+const serviceNames = services.map((s) => s.name).join(', ');
+
+const serviceList = services
+  .map((s) => `- ${s.name} — ${s.duration} dk — ₺${s.price.toLocaleString('tr-TR')}`)
+  .join('\n');
 
 export const APPOINTMENT_TOOLS: Anthropic.Tool[] = [
   {
@@ -15,8 +24,7 @@ export const APPOINTMENT_TOOLS: Anthropic.Tool[] = [
         },
         service: {
           type: 'string',
-          description:
-            'Hizmet adı. Geçerli değerler: Saç Kesimi, Saç Boyama, Manikür, Pedikür, Kaş Tasarımı, Cilt Bakımı, Masaj, Kalıcı Makyaj',
+          description: `Hizmet adı. Geçerli değerler: ${serviceNames}`,
         },
         requested_time: {
           type: 'string',
@@ -64,7 +72,7 @@ export const APPOINTMENT_TOOLS: Anthropic.Tool[] = [
   },
 ];
 
-export const SYSTEM_PROMPT = `Sen "Bella Güzellik Salonu"nun yapay zeka randevu asistanısın. Adın Bella.
+export const SYSTEM_PROMPT = `Sen "${businessName}"nun yapay zeka randevu asistanısın. Adın ${assistantName}.
 
 Görevin:
 1. Müşterileri sıcak ve profesyonel karşıla
@@ -76,19 +84,12 @@ Görevin:
 7. Randevu onaylandığında tüm detayları özetle
 
 Sunduğumuz hizmetler, süreler ve fiyatlar:
-- Saç Kesimi — 45 dk — ₺350
-- Saç Boyama — 120 dk — ₺950
-- Manikür — 60 dk — ₺280
-- Pedikür — 60 dk — ₺320
-- Kaş Tasarımı — 30 dk — ₺220
-- Cilt Bakımı — 90 dk — ₺650
-- Masaj — 60 dk — ₺500
-- Kalıcı Makyaj — 120 dk — ₺1.600
+${serviceList}
 
 Müşteri fiyat sorarsa yukarıdaki listeyi açıkça paylaş.
 
-Çalışma saatlerimiz: Pazartesi-Cumartesi 09:00-19:00
-Randevu slotları: 30 dakikalık aralıklarla (09:00, 09:30, 10:00, 10:30, 11:00, 11:30, ...)
+Çalışma saatlerimiz: ${workingHours.workingDaysLabel} ${String(workingHours.start).padStart(2, '0')}:00-${String(workingHours.end).padStart(2, '0')}:00
+Randevu slotları: ${workingHours.slotMinutes} dakikalık aralıklarla (09:00, 09:30, 10:00, 10:30, ...)
 Müşteri 11:30 veya 14:30 gibi yarım saat isteyebilir — bu tamamen geçerlidir.
 
 Kurallar:

@@ -1,16 +1,9 @@
 // lib/types.ts
+import { CLIENT_CONFIG, ServiceName } from '@/config/client';
 
 export type AppointmentStatus = 'confirmed' | 'pending' | 'cancelled';
 
-export type ServiceType =
-  | 'Saç Kesimi'
-  | 'Saç Boyama'
-  | 'Manikür'
-  | 'Pedikür'
-  | 'Kaş Tasarımı'
-  | 'Cilt Bakımı'
-  | 'Masaj'
-  | 'Kalıcı Makyaj';
+export type ServiceType = ServiceName;
 
 export interface Appointment {
   id: string;
@@ -38,19 +31,12 @@ export interface TimeSlot {
   available: boolean;
 }
 
-export const SERVICE_DURATIONS: Record<ServiceType, number> = {
-  'Saç Kesimi': 45,
-  'Saç Boyama': 120,
-  'Manikür': 60,
-  'Pedikür': 60,
-  'Kaş Tasarımı': 30,
-  'Cilt Bakımı': 90,
-  'Masaj': 60,
-  'Kalıcı Makyaj': 120,
-};
+export const SERVICE_DURATIONS: Record<ServiceType, number> = Object.fromEntries(
+  CLIENT_CONFIG.services.map((s) => [s.name, s.duration])
+) as Record<ServiceType, number>;
 
 export const WORKING_HOURS = {
-  start: 9,   // 09:00
-  end: 19,    // 19:00
-  slotMinutes: 30,
+  start: CLIENT_CONFIG.workingHours.start,
+  end: CLIENT_CONFIG.workingHours.end,
+  slotMinutes: CLIENT_CONFIG.workingHours.slotMinutes,
 };
