@@ -11,6 +11,7 @@ import { ThemeProvider } from '@/components/dashboard/ThemeProvider';
 import { PalettePicker } from '@/components/dashboard/PalettePicker';
 import { ScrollToTop } from '@/components/dashboard/ScrollToTop';
 import { LiveClock } from '@/components/dashboard/LiveClock';
+import { NewAppointmentButton } from '@/components/dashboard/NewAppointmentButton';
 import { UserButton } from '@clerk/nextjs';
 import { Scissors } from 'lucide-react';
 
@@ -171,6 +172,7 @@ export default function DashboardPage() {
               <span className="gold-shimmer">Randevu Yönetimi</span>
             </h1>
             <div className="h-px flex-1 max-w-xs hidden md:block" style={{ background: 'linear-gradient(90deg, var(--border-gold), transparent)', marginBottom: 8 }} />
+            <NewAppointmentButton />
           </div>
           <p className="text-xs tracking-wider mt-1" style={{ color: 'var(--text-3)' }}>
             Bella Güzellik Salonu · Genel Bakış

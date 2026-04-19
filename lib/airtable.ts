@@ -110,6 +110,14 @@ export async function markReminderSent(id: string): Promise<void> {
   await table.update(id, { reminderSent: true });
 }
 
+export async function updateAppointmentFields(
+  id: string,
+  fields: Partial<Omit<Appointment, 'id' | 'createdAt'>> & { googleCalendarEventId?: string }
+): Promise<Appointment> {
+  const record = await table.update(id, fields as Airtable.FieldSet);
+  return recordToAppointment(record);
+}
+
 export async function rescheduleAppointment(
   id: string,
   date: string,

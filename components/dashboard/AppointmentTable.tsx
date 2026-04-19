@@ -4,6 +4,8 @@ import { Appointment } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { AppointmentForm } from './AppointmentForm';
 
 interface Props { appointments: Appointment[]; }
 
@@ -21,11 +23,33 @@ const SVC_DOT: Record<string, string> = {
 
 export function AppointmentTable({ appointments }: Props) {
   const [hovered, setHovered] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Appointment | null>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'pending' | 'cancelled'>('all');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'upcoming' | 'past'>('upcoming');
+  const router = useRouter();
+
+  const today = new Date().toISOString().split('T')[0];
 
   const sorted = [...appointments].sort((a, b) => {
     const aKey = `${a.date ?? '9999-12-31'}T${a.time ?? '23:59'}`;
     const bKey = `${b.date ?? '9999-12-31'}T${b.time ?? '23:59'}`;
     return aKey.localeCompare(bKey);
+  });
+
+  const filtered = sorted.filter((a) => {
+    const q = search.toLowerCase();
+    const matchesSearch = !q ||
+      a.customerName.toLowerCase().includes(q) ||
+      a.customerPhone.includes(q) ||
+      a.service.toLowerCase().includes(q);
+    const matchesStatus = statusFilter === 'all' || a.status === statusFilter;
+    const matchesDate =
+      dateFilter === 'all' ? true :
+      dateFilter === 'today' ? a.date === today :
+      dateFilter === 'upcoming' ? a.date >= today :
+      a.date < today;
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   if (appointments.length === 0) {
@@ -42,77 +66,135 @@ export function AppointmentTable({ appointments }: Props) {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr style={{ borderBottom: '1px solid var(--border)' }}>
-            <th className="text-left py-3 px-5 text-[10px] font-medium tracking-[0.14em] uppercase w-8" style={{ color: 'var(--text-3)' }}>#</th>
-            {['Müşteri', 'Hizmet', 'Tarih & Saat', 'Süre', 'Durum'].map((h) => (
-              <th key={h} className="text-left py-3 px-4 text-[10px] font-medium tracking-[0.14em] uppercase" style={{ color: 'var(--text-3)' }}>
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((a, i) => {
-            const cfg = STATUS[a.status] ?? STATUS.pending;
-            const dot = SVC_DOT[a.service] ?? '#D4AF6E';
-            const isHov = hovered === a.id;
-            return (
-              <tr
-                key={a.id}
-                onMouseEnter={() => setHovered(a.id)}
-                onMouseLeave={() => setHovered(null)}
-                className="anim-up"
-                style={{
-                  borderBottom: '1px solid var(--border)',
-                  background: isHov ? 'var(--bg-hover)' : 'transparent',
-                  transition: 'background 0.15s ease',
-                  animationDelay: `${i * 25}ms`,
-                }}
-              >
-                <td className="py-4 px-5">
-                  <span className="text-[11px] tabular-nums" style={{ color: 'var(--text-3)', fontFamily: '"Cormorant Garamond", serif' }}>
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-                </td>
-                <td className="py-4 px-4">
-                  <p className="font-medium" style={{ color: 'var(--text-1)' }}>{a.customerName}</p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{a.customerPhone}</p>
-                </td>
-                <td className="py-4 px-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: dot }} />
-                    <span style={{ color: 'var(--text-2)' }}>{a.service}</span>
-                  </div>
-                </td>
-                <td className="py-4 px-4">
-                  {a.date ? (
-                    <>
-                      <p style={{ color: 'var(--text-1)' }}>{format(parseISO(a.date), 'd MMMM yyyy', { locale: tr })}</p>
-                      <p className="text-xs mt-0.5 tabular-nums" style={{ color: 'var(--text-3)', fontFamily: '"Cormorant Garamond", serif' }}>
-                        {a.time}
-                      </p>
-                    </>
-                  ) : <span style={{ color: 'var(--text-3)' }}>—</span>}
-                </td>
-                <td className="py-4 px-4">
-                  <span style={{ color: 'var(--text-3)' }}>{a.durationMinutes} dk</span>
-                </td>
-                <td className="py-4 px-4">
-                  <span
-                    className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium"
-                    style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.color }}
-                  >
-                    {cfg.label}
-                  </span>
+    <>
+      <div className="overflow-x-auto">
+        {/* Filtreler */}
+        <div className="px-5 py-3 flex flex-wrap gap-3 items-center" style={{ borderBottom: '1px solid var(--border)' }}>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Ara: isim, telefon, hizmet..."
+            className="flex-1 min-w-[200px] px-3 py-1.5 rounded-lg text-sm"
+            style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
+          />
+          <select
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value as typeof dateFilter)}
+            className="px-3 py-1.5 rounded-lg text-sm"
+            style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
+          >
+            <option value="upcoming">Yaklaşan</option>
+            <option value="today">Bugün</option>
+            <option value="past">Geçmiş</option>
+            <option value="all">Hepsi</option>
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+            className="px-3 py-1.5 rounded-lg text-sm"
+            style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
+          >
+            <option value="all">Tüm Durumlar</option>
+            <option value="confirmed">Onaylı</option>
+            <option value="pending">Bekliyor</option>
+            <option value="cancelled">İptal</option>
+          </select>
+        </div>
+
+        <table className="w-full text-sm">
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+              <th className="text-left py-3 px-5 text-[10px] font-medium tracking-[0.14em] uppercase w-8" style={{ color: 'var(--text-3)' }}>#</th>
+              {['Müşteri', 'Hizmet', 'Tarih & Saat', 'Süre', 'Durum', 'İşlem'].map((h) => (
+                <th key={h} className="text-left py-3 px-4 text-[10px] font-medium tracking-[0.14em] uppercase" style={{ color: 'var(--text-3)' }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="py-12 text-center">
+                  <p className="text-xs tracking-widest uppercase" style={{ color: 'var(--text-3)' }}>Sonuç bulunamadı</p>
                 </td>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+            ) : filtered.map((a, i) => {
+              const cfg = STATUS[a.status] ?? STATUS.pending;
+              const dot = SVC_DOT[a.service] ?? '#D4AF6E';
+              const isHov = hovered === a.id;
+              return (
+                <tr
+                  key={a.id}
+                  onMouseEnter={() => setHovered(a.id)}
+                  onMouseLeave={() => setHovered(null)}
+                  className="anim-up"
+                  style={{
+                    borderBottom: '1px solid var(--border)',
+                    background: isHov ? 'var(--bg-hover)' : 'transparent',
+                    transition: 'background 0.15s ease',
+                    animationDelay: `${i * 25}ms`,
+                  }}
+                >
+                  <td className="py-4 px-5">
+                    <span className="text-[11px] tabular-nums" style={{ color: 'var(--text-3)', fontFamily: '"Cormorant Garamond", serif' }}>
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                  </td>
+                  <td className="py-4 px-4">
+                    <p className="font-medium" style={{ color: 'var(--text-1)' }}>{a.customerName}</p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{a.customerPhone}</p>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: dot }} />
+                      <span style={{ color: 'var(--text-2)' }}>{a.service}</span>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    {a.date ? (
+                      <>
+                        <p style={{ color: 'var(--text-1)' }}>{format(parseISO(a.date), 'd MMMM yyyy', { locale: tr })}</p>
+                        <p className="text-xs mt-0.5 tabular-nums" style={{ color: 'var(--text-3)', fontFamily: '"Cormorant Garamond", serif' }}>
+                          {a.time}
+                        </p>
+                      </>
+                    ) : <span style={{ color: 'var(--text-3)' }}>—</span>}
+                  </td>
+                  <td className="py-4 px-4">
+                    <span style={{ color: 'var(--text-3)' }}>{a.durationMinutes} dk</span>
+                  </td>
+                  <td className="py-4 px-4">
+                    <span
+                      className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium"
+                      style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.color }}
+                    >
+                      {cfg.label}
+                    </span>
+                  </td>
+                  <td className="py-4 px-4">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEditing(a); }}
+                      className="text-xs transition-opacity hover:opacity-70"
+                      style={{ color: 'var(--gold)' }}
+                    >
+                      Düzenle
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {editing && (
+        <AppointmentForm
+          appointment={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => { setEditing(null); router.refresh(); }}
+        />
+      )}
+    </>
   );
 }
