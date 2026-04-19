@@ -98,6 +98,10 @@ export async function cancelAppointment(id: string): Promise<void> {
   await table.update(id, { status: 'cancelled' });
 }
 
+export async function markReminderSent(id: string): Promise<void> {
+  await table.update(id, { reminderSent: true });
+}
+
 export async function rescheduleAppointment(
   id: string,
   date: string,

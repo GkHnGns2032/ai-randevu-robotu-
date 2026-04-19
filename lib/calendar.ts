@@ -97,7 +97,7 @@ export async function createCalendarEvent(params: {
   const calendar = getCalendarClient();
   const calendarId = process.env.GOOGLE_CALENDAR_ID!;
 
-  const startDateTime = new Date(`${params.date}T${params.time}:00`);
+  const startDateTime = new Date(`${params.date}T${params.time}:00+03:00`);
   const endDateTime = addMinutes(startDateTime, params.durationMinutes);
 
   const { data } = await calendar.events.insert({
