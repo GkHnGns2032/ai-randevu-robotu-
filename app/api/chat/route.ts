@@ -256,11 +256,16 @@ export async function POST(req: NextRequest) {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     const systemWithDate = `${SYSTEM_PROMPT}\n\nBugünün tarihi: ${today}. Bundan önceki herhangi bir tarihe randevu oluşturma — müşteriye bugün veya sonrası için tarih belirlemesini söyle.`;
 
+    const cachedSystem = [{ type: 'text' as const, text: systemWithDate, cache_control: { type: 'ephemeral' as const } }];
+    const cachedTools = APPOINTMENT_TOOLS.map((tool, idx) =>
+      idx === APPOINTMENT_TOOLS.length - 1 ? { ...tool, cache_control: { type: 'ephemeral' as const } } : tool
+    );
+
     let response = await client.messages.create({
       model: MODEL, // M1
       max_tokens: 2048, // I4
-      system: systemWithDate,
-      tools: APPOINTMENT_TOOLS,
+      system: cachedSystem,
+      tools: cachedTools,
       messages: anthropicMessages,
     });
 
@@ -270,7 +275,7 @@ export async function POST(req: NextRequest) {
         (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
       );
 
-const toolResults = await Promise.all(
+      const toolResults = await Promise.all(
         toolUseBlocks.map(async (block) => {
           const input = Object.fromEntries(
             Object.entries(block.input as Record<string, unknown>).map(([k, v]) => [k, String(v)])
@@ -286,8 +291,8 @@ const toolResults = await Promise.all(
       response = await client.messages.create({
         model: MODEL, // M1
         max_tokens: 2048, // I4
-        system: systemWithDate,
-        tools: APPOINTMENT_TOOLS,
+        system: cachedSystem,
+        tools: cachedTools,
         messages: anthropicMessages,
       });
     }
