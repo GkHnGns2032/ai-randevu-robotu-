@@ -7,6 +7,7 @@ import { NextAppointment } from '@/components/dashboard/NextAppointment';
 import { InsightsPanel } from '@/components/dashboard/InsightsPanel';
 import { VoiceSummary } from '@/components/dashboard/VoiceSummary';
 import { CustomerList } from '@/components/dashboard/CustomerList';
+import { StaffManager } from '@/components/dashboard/StaffManager';
 import { ThemeProvider } from '@/components/dashboard/ThemeProvider';
 import { PalettePicker } from '@/components/dashboard/PalettePicker';
 import { ScrollToTop } from '@/components/dashboard/ScrollToTop';
@@ -63,6 +64,10 @@ async function DashboardContent() {
 
       <Section title="Müşteriler" delay={400}>
         <CustomerList appointments={appointments} />
+      </Section>
+
+      <Section title="Personel" delay={450}>
+        <StaffManager />
       </Section>
 
       <Section title="Tüm Randevular" delay={500}>
