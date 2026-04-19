@@ -2,8 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { APPOINTMENT_TOOLS, SYSTEM_PROMPT } from '@/lib/ai-tools';
-import { getAvailableSlots, findNextAvailableSlots, createCalendarEvent } from '@/lib/calendar';
-import { createAppointment } from '@/lib/airtable';
+import { getAvailableSlots, findNextAvailableSlots, createCalendarEvent, deleteCalendarEvent } from '@/lib/calendar';
+import { createAppointment, findAppointmentsByPhone, cancelAppointment, rescheduleAppointment } from '@/lib/airtable';
 import { SERVICE_DURATIONS, ServiceType } from '@/lib/types';
 
 // I3 — Env var guard at module level
@@ -112,6 +112,71 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
     }
   }
 
+  if (toolName === 'find_appointment') {
+    try {
+      const appointments = await findAppointmentsByPhone(toolInput.customer_phone);
+      if (appointments.length === 0) {
+        return JSON.stringify({ found: false, message: 'Bu telefon numarasına kayıtlı aktif randevu bulunamadı.' });
+      }
+      const list = appointments.map((a) => ({
+        id: a.id,
+        date: a.date,
+        time: a.time,
+        service: a.service,
+        googleCalendarEventId: (a as unknown as Record<string, string>).googleCalendarEventId ?? '',
+      }));
+      return JSON.stringify({ found: true, appointments: list });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Randevu aranamadı';
+      return JSON.stringify({ found: false, error: message });
+    }
+  }
+
+  if (toolName === 'cancel_appointment') {
+    try {
+      await cancelAppointment(toolInput.appointment_id);
+      if (toolInput.google_calendar_event_id) {
+        try { await deleteCalendarEvent(toolInput.google_calendar_event_id); } catch { /* ignore */ }
+      }
+      return JSON.stringify({ success: true, message: 'Randevu iptal edildi.' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'İptal edilemedi';
+      return JSON.stringify({ success: false, error: message });
+    }
+  }
+
+  if (toolName === 'reschedule_appointment') {
+    const service = toolInput.service as ServiceType;
+    const duration = SERVICE_DURATIONS[service] ?? 60;
+    let newEventId: string | undefined;
+    try {
+      if (toolInput.old_google_calendar_event_id) {
+        try { await deleteCalendarEvent(toolInput.old_google_calendar_event_id); } catch { /* ignore */ }
+      }
+      newEventId = await createCalendarEvent({
+        summary: `${service} - Randevu`,
+        description: 'Yeniden zamanlandı',
+        date: toolInput.new_date,
+        time: toolInput.new_time,
+        durationMinutes: duration,
+        attendeePhone: '',
+      });
+    } catch { /* calendar hatası kritik değil */ }
+
+    try {
+      const updated = await rescheduleAppointment(
+        toolInput.appointment_id,
+        toolInput.new_date,
+        toolInput.new_time,
+        newEventId,
+      );
+      return JSON.stringify({ success: true, appointment: { date: updated.date, time: updated.time, service: updated.service } });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Değişiklik yapılamadı';
+      return JSON.stringify({ success: false, error: message });
+    }
+  }
+
   return JSON.stringify({ error: 'Bilinmeyen araç' });
 }
 
@@ -132,10 +197,13 @@ export async function POST(req: NextRequest) {
       content: m.content,
     }));
 
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const systemWithDate = `${SYSTEM_PROMPT}\n\nBugünün tarihi: ${today}. Bundan önceki herhangi bir tarihe randevu oluşturma — müşteriye bugün veya sonrası için tarih belirlemesini söyle.`;
+
     let response = await client.messages.create({
       model: MODEL, // M1
       max_tokens: 2048, // I4
-      system: SYSTEM_PROMPT,
+      system: systemWithDate,
       tools: APPOINTMENT_TOOLS,
       messages: anthropicMessages,
     });
@@ -162,7 +230,7 @@ const toolResults = await Promise.all(
       response = await client.messages.create({
         model: MODEL, // M1
         max_tokens: 2048, // I4
-        system: SYSTEM_PROMPT,
+        system: systemWithDate,
         tools: APPOINTMENT_TOOLS,
         messages: anthropicMessages,
       });

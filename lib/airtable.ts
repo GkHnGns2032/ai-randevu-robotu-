@@ -83,3 +83,32 @@ export async function getAppointmentsByDate(date: string): Promise<Appointment[]
     .all();
   return records.map(recordToAppointment);
 }
+
+export async function findAppointmentsByPhone(phone: string): Promise<Appointment[]> {
+  const records = await table
+    .select({
+      filterByFormula: `AND({customerPhone} = "${phone}", {status} != "cancelled")`,
+      sort: [{ field: 'date', direction: 'asc' }, { field: 'time', direction: 'asc' }],
+    })
+    .all();
+  return records.map(recordToAppointment);
+}
+
+export async function cancelAppointment(id: string): Promise<void> {
+  await table.update(id, { status: 'cancelled' });
+}
+
+export async function rescheduleAppointment(
+  id: string,
+  date: string,
+  time: string,
+  googleCalendarEventId?: string
+): Promise<Appointment> {
+  const record = await table.update(id, {
+    date,
+    time,
+    status: 'confirmed',
+    ...(googleCalendarEventId !== undefined ? { googleCalendarEventId } : {}),
+  });
+  return recordToAppointment(record);
+}

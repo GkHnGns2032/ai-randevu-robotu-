@@ -112,3 +112,9 @@ export async function createCalendarEvent(params: {
 
   return data.id!;
 }
+
+export async function deleteCalendarEvent(eventId: string): Promise<void> {
+  const calendar = getCalendarClient();
+  const calendarId = process.env.GOOGLE_CALENDAR_ID!;
+  await calendar.events.delete({ calendarId, eventId });
+}

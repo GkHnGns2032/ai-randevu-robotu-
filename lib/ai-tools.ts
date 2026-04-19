@@ -54,6 +54,44 @@ export const APPOINTMENT_TOOLS: Anthropic.Tool[] = [
     },
   },
   {
+    name: 'find_appointment',
+    description: 'Müşterinin telefon numarasına göre aktif randevularını getirir. İptal veya değişiklik taleplerinde önce bu aracı çağır.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        customer_phone: { type: 'string', description: 'Müşterinin telefon numarası' },
+      },
+      required: ['customer_phone'],
+    },
+  },
+  {
+    name: 'cancel_appointment',
+    description: 'Randevuyu iptal eder. Önce find_appointment ile randevuyu bul, müşteriye hangisini iptal etmek istediğini sor, onay aldıktan sonra bu aracı çağır.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        appointment_id: { type: 'string', description: 'İptal edilecek randevunun ID\'si' },
+        google_calendar_event_id: { type: 'string', description: 'Google Calendar etkinlik ID\'si (varsa)' },
+      },
+      required: ['appointment_id'],
+    },
+  },
+  {
+    name: 'reschedule_appointment',
+    description: 'Randevunun tarih/saatini değiştirir. Önce find_appointment ile randevuyu bul, yeni tarih/saati check_availability ile kontrol et, sonra bu aracı çağır.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        appointment_id: { type: 'string', description: 'Değiştirilecek randevunun ID\'si' },
+        new_date: { type: 'string', description: 'Yeni tarih: YYYY-MM-DD' },
+        new_time: { type: 'string', description: 'Yeni saat: HH:MM' },
+        service: { type: 'string', description: 'Hizmet adı (availability kontrolü için)' },
+        old_google_calendar_event_id: { type: 'string', description: 'Eski Google Calendar etkinlik ID\'si (varsa)' },
+      },
+      required: ['appointment_id', 'new_date', 'new_time', 'service'],
+    },
+  },
+  {
     name: 'book_appointment',
     description:
       'Randevuyu kesinleştirir. Müşteri adı, telefon, hizmet, tarih ve saat onaylandıktan sonra çağır.',
@@ -98,6 +136,8 @@ Kurallar:
 - Soruları TEK TEK sor — bir anda birden fazla soru sorma. Cevap aldıktan sonra bir sonraki soruya geç.
 - Önce hizmet türünü öğren, sonra tarihi, sonra saati, sonra adı, sonra telefonu — sırayla
 - Telefon numarasını ve adı randevu öncesi mutlaka al
+- Telefon numarası 05XX XXX XX XX veya 5XX XXX XX XX formatında olmalı (10 rakam, 5 ile başlamalı). Yanlış formatta girilirse: "Telefon numaranızı 05XX XXX XX XX formatında alabilir miyim?" de, düzelene kadar devam etme
+- Müşteri geçmiş bir tarihe randevu isterse (bugünden önceki bir tarih): "Geçmiş bir tarihe randevu oluşturamıyorum, bugün veya sonrası için bir tarih belirleyelim" de ve yeni tarih sor. Bugünün tarihi: randevu aracı çağrılırken kontrol edilmese de sen tarihin geçmişte olmadığını doğrula
 - Tarihi onaylamadan önce check_availability aracıyla müsaitliği kontrol et
 - Tüm bilgiler toplandıktan sonra MUTLAKA book_appointment aracını çağır — bu araç çağrılmadan randevu oluşturulmaz
 - book_appointment aracı başarılı dönmeden "randevunuz oluşturuldu" ASLA deme
@@ -107,4 +147,18 @@ Kurallar:
 - check_availability'den { requested_time_available: true } gelirse → adı ve telefonu al, book_appointment çağır
 - ASLA "teknik sorun", "sistem hatası", "geçici sorun", "bakamadım", "kontrol edemedim" gibi ifadeler kullanma — kesinlikle yasak
 - Araç { available: false, message } döndürürse → message alanındaki metni kullan; message yoksa müşteriyi başka saat söylemesi için yönlendir
-- Araç hata döndürse bile müşteriyi soğutma — "Hangi saatte uygunsunuz, sizi o saate alayım" şeklinde devam et ve book_appointment ile randevuyu yine de oluştur`;
+- Araç hata döndürse bile müşteriyi soğutma — "Hangi saatte uygunsunuz, sizi o saate alayım" şeklinde devam et ve book_appointment ile randevuyu yine de oluştur
+
+Randevu sonrası davranış:
+- Randevu başarıyla oluşturulduktan sonra: tarih, saat, hizmet, süreyi özetle ve "Görüşmek üzere, iyi günler!" gibi sıcak bir kapanış yap
+- Müşteri "teşekkürler" veya benzeri bir şey derse: "Rica ederim! Randevunuzu hatırlatmak için sizi arayabiliriz. İyi günler 😊" gibi samimi, kısa bir cevap ver
+- Müşteri yeni bir randevu almak isterse: randevu akışını baştan başlat
+- Müşteri genel bir sohbet açarsa: kısa ve samimi cevap ver, konuşmayı salona yönlendir
+
+İptal ve değişiklik:
+- Müşteri iptal veya değişiklik isterse: önce telefon numarasını sor
+- Telefonu alınca find_appointment çağır
+- Bulunan randevuları müşteriye listele ve hangisini iptal/değiştirmek istediğini sor
+- İptal için: onay al → cancel_appointment çağır → "Randevunuz iptal edildi" de
+- Değişiklik için: yeni tarih ve saati sor → check_availability ile kontrol et → reschedule_appointment çağır → yeni detayları özetle
+- find_appointment sonucu boş gelirse: "Bu telefon numarasına kayıtlı aktif randevu bulamadım" de`;
