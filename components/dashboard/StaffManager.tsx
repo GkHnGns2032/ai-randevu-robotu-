@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, User, CheckCircle2, Circle } from 'lucide-react';
+import { Plus, Trash2, User, CheckCircle2, Circle, ChevronDown, ChevronUp } from 'lucide-react';
 import { CLIENT_CONFIG } from '@/config/client';
 import type { Staff } from '@/lib/staff';
 
@@ -18,6 +18,7 @@ export function StaffManager() {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [newStaff, setNewStaff] = useState<{ name: string; role: string; services: string[] }>({
@@ -114,12 +115,33 @@ export function StaffManager() {
 
   return (
     <div>
+      {/* Toggle button — stats always visible */}
+      <button
+        onClick={() => setListOpen((p) => !p)}
+        className="w-full mb-4 flex items-center justify-between px-4 py-2.5 rounded-xl text-sm transition-colors hover:opacity-80"
+        style={{
+          background: 'var(--bg-hover)',
+          border: '1px solid var(--border)',
+          color: 'var(--text-2)',
+        }}
+      >
+        <span className="flex items-center gap-2">
+          <span className="text-[10px] tracking-[0.16em] uppercase" style={{ color: 'var(--text-3)' }}>
+            {listOpen ? 'Personeli Gizle' : 'Personeli Göster'}
+          </span>
+          <span className="tabular-nums text-xs" style={{ color: 'var(--text-3)' }}>
+            ({staff.length} personel · {staff.filter((s) => s.active).length} aktif)
+          </span>
+        </span>
+        {listOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+      </button>
+
+      {listOpen && (
+      <div>
       {/* Header row: add button */}
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs" style={{ color: 'var(--text-3)' }}>
-          {staff.length === 0
-            ? 'Henüz personel eklenmemiş'
-            : `${staff.length} personel · ${staff.filter((s) => s.active).length} aktif`}
+          {staff.length === 0 ? 'Henüz personel eklenmemiş' : ''}
         </p>
         {!adding && (
           <button
@@ -330,6 +352,8 @@ export function StaffManager() {
           </table>
         </div>
       ) : null}
+      </div>
+      )}
     </div>
   );
 }
