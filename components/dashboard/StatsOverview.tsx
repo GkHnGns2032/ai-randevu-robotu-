@@ -1,7 +1,7 @@
 import { Appointment } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, Clock, TrendingUp, Users } from 'lucide-react';
-import { isToday, isThisWeek, isThisMonth } from 'date-fns';
+import { isToday, isThisWeek, isThisMonth, parseISO } from 'date-fns';
 
 interface Props {
   appointments: Appointment[];
@@ -9,9 +9,9 @@ interface Props {
 
 export function StatsOverview({ appointments }: Props) {
   const confirmed = appointments.filter((a) => a.status === 'confirmed');
-  const todayCount = confirmed.filter((a) => isToday(new Date(a.date))).length;
-  const weekCount = confirmed.filter((a) => isThisWeek(new Date(a.date))).length;
-  const monthCount = confirmed.filter((a) => isThisMonth(new Date(a.date))).length;
+  const todayCount = confirmed.filter((a) => isToday(parseISO(a.date))).length;
+  const weekCount = confirmed.filter((a) => isThisWeek(parseISO(a.date))).length;
+  const monthCount = confirmed.filter((a) => isThisMonth(parseISO(a.date))).length;
   const totalCount = confirmed.length;
 
   const stats = [

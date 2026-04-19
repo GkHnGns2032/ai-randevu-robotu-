@@ -1,5 +1,5 @@
 import { Appointment } from '@/lib/types';
-import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
+import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
 interface Props {
@@ -7,7 +7,7 @@ interface Props {
   weekStart?: Date;
 }
 
-const HOURS = Array.from({ length: 10 }, (_, i) => i + 9); // 9-18
+const HOURS = Array.from({ length: 11 }, (_, i) => i + 9); // 9-19
 
 export function AppointmentCalendar({ appointments, weekStart = new Date() }: Props) {
   const start = startOfWeek(weekStart, { weekStartsOn: 1 });
@@ -33,8 +33,9 @@ export function AppointmentCalendar({ appointments, weekStart = new Date() }: Pr
             <div className="text-xs text-gray-300 py-1 pr-2 text-right">{hour}:00</div>
             {days.map((day) => {
               const appts = appointments.filter((a) => {
-                if (!isSameDay(new Date(a.date), day)) return false;
-                const apptHour = parseInt(a.time.split(':')[0]);
+                if (!isSameDay(parseISO(a.date), day)) return false;
+                const apptHour = parseInt(a.time?.split(':')[0] ?? '', 10);
+                if (isNaN(apptHour)) return false;
                 return apptHour === hour;
               });
               return (

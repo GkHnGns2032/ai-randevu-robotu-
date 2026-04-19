@@ -1,5 +1,5 @@
 import { Appointment } from '@/lib/types';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
 interface Props {
@@ -24,11 +24,11 @@ export function AppointmentTable({ appointments }: Props) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="w-full text-sm" aria-label="Randevu listesi">
         <thead>
           <tr className="border-b border-gray-100">
             {['Müşteri', 'Hizmet', 'Tarih', 'Saat', 'Süre', 'Durum'].map((h) => (
-              <th key={h} className="text-left py-3 px-4 font-medium text-gray-500 text-xs uppercase tracking-wide">
+              <th key={h} scope="col" className="text-left py-3 px-4 font-medium text-gray-500 text-xs uppercase tracking-wide">
                 {h}
               </th>
             ))}
@@ -36,7 +36,7 @@ export function AppointmentTable({ appointments }: Props) {
         </thead>
         <tbody>
           {appointments.map((appt) => {
-            const cfg = STATUS_CONFIG[appt.status];
+            const cfg = STATUS_CONFIG[appt.status] ?? STATUS_CONFIG['pending'];
             return (
               <tr key={appt.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                 <td className="py-3 px-4">
@@ -45,7 +45,7 @@ export function AppointmentTable({ appointments }: Props) {
                 </td>
                 <td className="py-3 px-4 text-gray-700">{appt.service}</td>
                 <td className="py-3 px-4 text-gray-700">
-                  {format(new Date(appt.date), 'd MMMM yyyy', { locale: tr })}
+                  {format(parseISO(appt.date), 'd MMMM yyyy', { locale: tr })}
                 </td>
                 <td className="py-3 px-4 text-gray-700">{appt.time}</td>
                 <td className="py-3 px-4 text-gray-500">{appt.durationMinutes} dk</td>
