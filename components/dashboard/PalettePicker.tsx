@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useTheme, ThemeName } from './ThemeProvider';
-import { Check } from 'lucide-react';
+import { Check, Palette } from 'lucide-react';
 
 const PALETTES: { id: ThemeName; label: string; swatch: string; bg: string }[] = [
   { id: 'obsidian',  label: 'Obsidyen Altın',   swatch: '#D4AF6E', bg: '#09090C' },
@@ -23,11 +23,21 @@ export function PalettePicker() {
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+        document.documentElement.setAttribute('data-theme', theme);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  }, [theme]);
+
+  function previewTheme(id: ThemeName) {
+    document.documentElement.setAttribute('data-theme', id);
+  }
+  function restoreTheme() {
+    document.documentElement.setAttribute('data-theme', theme);
+  }
 
   return (
     <div ref={ref} className="relative">
@@ -41,22 +51,18 @@ export function PalettePicker() {
           border: '1px solid var(--border)',
         }}
       >
-        {/* Mini palette preview: 3 color dots */}
-        <div className="flex gap-0.5">
-          {PALETTES.slice(0, 4).map((p) => (
-            <div
-              key={p.id}
-              className="w-2 h-2 rounded-full transition-all"
-              style={{
-                background: p.swatch,
-                opacity: p.id === theme ? 1 : 0.45,
-                transform: p.id === theme ? 'scale(1.3)' : 'scale(1)',
-              }}
-            />
-          ))}
-        </div>
+        <Palette size={13} style={{ color: 'var(--text-3)' }} />
+        <span className="text-[10px] font-semibold tracking-[0.18em] uppercase hidden sm:inline" style={{ color: 'var(--text-3)' }}>
+          Tema
+        </span>
         <div className="w-px h-4" style={{ background: 'var(--border)' }} />
-        <div className="w-3 h-3 rounded-full" style={{ background: current.swatch, boxShadow: `0 0 8px ${current.swatch}80` }} />
+        <div
+          className="w-3.5 h-3.5 rounded-full"
+          style={{
+            background: current.swatch,
+            boxShadow: `0 0 10px ${current.swatch}90, inset 0 0 0 1px rgba(255,255,255,0.2)`,
+          }}
+        />
       </button>
 
       {/* Dropdown panel */}
@@ -82,6 +88,8 @@ export function PalettePicker() {
                 <button
                   key={p.id}
                   onClick={() => { setTheme(p.id); setOpen(false); }}
+                  onMouseEnter={() => previewTheme(p.id)}
+                  onMouseLeave={restoreTheme}
                   className="relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition-all hover:scale-[1.02]"
                   style={{
                     background: active ? 'var(--bg-hover)' : 'transparent',

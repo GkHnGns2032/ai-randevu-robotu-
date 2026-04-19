@@ -4,6 +4,7 @@ import { StatsOverview } from '@/components/dashboard/StatsOverview';
 import { AppointmentTable } from '@/components/dashboard/AppointmentTable';
 import { AppointmentCalendar } from '@/components/dashboard/AppointmentCalendar';
 import { NextAppointment } from '@/components/dashboard/NextAppointment';
+import { TodaySummary } from '@/components/dashboard/TodaySummary';
 import { InsightsPanel } from '@/components/dashboard/InsightsPanel';
 import { VoiceSummary } from '@/components/dashboard/VoiceSummary';
 import { CustomerList } from '@/components/dashboard/CustomerList';
@@ -45,8 +46,9 @@ async function DashboardContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex items-start gap-4 flex-wrap">
         <NextAppointment appointments={appointments} />
+        <TodaySummary appointments={appointments} />
         <VoiceSummary appointments={appointments} />
       </div>
 
