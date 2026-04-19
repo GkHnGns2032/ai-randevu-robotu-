@@ -6,9 +6,9 @@ import { ChatInput } from './ChatInput';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const INITIAL_MESSAGE: ChatMessage = {
+  id: 'initial',
   role: 'assistant',
-  content:
-    'Merhaba! Ben Bella, Bella Güzellik Salonu\'nun randevu asistanıyım. 💇‍♀️\n\nSize nasıl yardımcı olabilirim? Hangi hizmetimizden yararlanmak istersiniz?',
+  content: 'Merhaba! Ben Bella, Bella Güzellik Salonu\'nun randevu asistanıyım. 💇‍♀️\n\nSize nasıl yardımcı olabilirim? Hangi hizmetimizden yararlanmak istersiniz?',
   timestamp: new Date(),
 };
 
@@ -22,7 +22,7 @@ export function ChatInterface() {
   }, [messages]);
 
   async function handleSend(text: string) {
-    const userMessage: ChatMessage = { role: 'user', content: text, timestamp: new Date() };
+    const userMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: text, timestamp: new Date() };
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
     setLoading(true);
@@ -38,19 +38,19 @@ export function ChatInterface() {
         }),
       });
 
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`);
+      }
       const data = await res.json() as { message: string };
+      const reply = data.message ?? 'Bir hata oluştu. Lütfen tekrar deneyin.';
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: data.message, timestamp: new Date() },
+        { id: crypto.randomUUID(), role: 'assistant', content: reply, timestamp: new Date() },
       ]);
     } catch {
       setMessages((prev) => [
         ...prev,
-        {
-          role: 'assistant',
-          content: 'Bir hata oluştu. Lütfen tekrar deneyin.',
-          timestamp: new Date(),
-        },
+        { id: crypto.randomUUID(), role: 'assistant', content: 'Bir hata oluştu. Lütfen tekrar deneyin.', timestamp: new Date() },
       ]);
     } finally {
       setLoading(false);
@@ -61,7 +61,7 @@ export function ChatInterface() {
     <div className="flex flex-col h-full bg-gray-50">
       <ScrollArea className="flex-1 px-4 py-6">
         {messages.map((m, i) => (
-          <MessageBubble key={i} message={m} />
+          <MessageBubble key={m.id ?? i} message={m} />
         ))}
         {loading && (
           <div className="flex gap-3 mb-4">

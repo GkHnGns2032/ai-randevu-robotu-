@@ -40,6 +40,7 @@ export function ChatInput({ onSend, disabled }: Props) {
         onClick={handleSend}
         disabled={disabled || !value.trim()}
         size="icon"
+        aria-label="Mesaj gönder"
         className="rounded-full bg-gradient-to-br from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700"
       >
         <Send size={16} />
