@@ -16,6 +16,7 @@ export interface Appointment {
   status: AppointmentStatus;
   notes?: string;
   createdAt: string;   // ISO 8601 datetime
+  isNoShow?: boolean;
 }
 
 export interface ChatMessage {

@@ -21,6 +21,7 @@ interface CustomerRow {
   name: string;
   totalVisits: number;
   cancelledCount: number;
+  noShowCount: number;
   totalSpent: number;
   favoriteService: string;
   lastVisit: string | null;
@@ -44,6 +45,7 @@ function buildCustomers(appointments: Appointment[]): CustomerRow[] {
     const name = appts[appts.length - 1].customerName;
     const confirmed = appts.filter((a) => a.status !== 'cancelled');
     const cancelled = appts.filter((a) => a.status === 'cancelled');
+    const noShows = appts.filter((a) => a.isNoShow);
 
     const totalSpent = confirmed.reduce((sum, a) => sum + (SERVICE_PRICES[a.service] ?? 0), 0);
 
@@ -64,6 +66,7 @@ function buildCustomers(appointments: Appointment[]): CustomerRow[] {
       name,
       totalVisits: confirmed.length,
       cancelledCount: cancelled.length,
+      noShowCount: noShows.length,
       totalSpent,
       favoriteService,
       lastVisit: pastVisits[0]?.date ?? null,
@@ -230,6 +233,14 @@ export function CustomerList({ appointments }: Props) {
                         {c.cancelledCount > 0 && (
                           <span className="text-[10px]" style={{ color: 'var(--rose)' }}>
                             ({c.cancelledCount} iptal)
+                          </span>
+                        )}
+                        {c.noShowCount > 0 && (
+                          <span
+                            className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                            style={{ background: 'rgba(240,160,168,0.15)', color: 'var(--rose)' }}
+                          >
+                            {c.noShowCount}× gelmedi
                           </span>
                         )}
                       </div>

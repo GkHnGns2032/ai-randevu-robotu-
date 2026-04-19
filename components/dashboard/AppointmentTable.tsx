@@ -27,7 +27,18 @@ export function AppointmentTable({ appointments }: Props) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'pending' | 'cancelled'>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'upcoming' | 'past'>('upcoming');
+  const [noShowPending, setNoShowPending] = useState<string | null>(null);
   const router = useRouter();
+
+  async function handleNoShow(id: string) {
+    setNoShowPending(id);
+    try {
+      await fetch(`/api/appointments/${id}/no-show`, { method: 'POST' });
+      router.refresh();
+    } finally {
+      setNoShowPending(null);
+    }
+  }
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -128,9 +139,13 @@ export function AppointmentTable({ appointments }: Props) {
                 </td>
               </tr>
             ) : filtered.map((a, i) => {
-              const cfg = STATUS[a.status] ?? STATUS.pending;
+              const cfg = a.isNoShow
+                ? { label: 'Gelmedi', color: 'var(--rose)', bg: 'rgba(240,160,168,0.08)', border: 'rgba(240,160,168,0.3)' }
+                : STATUS[a.status] ?? STATUS.pending;
               const dot = SVC_DOT[a.service] ?? '#D4AF6E';
               const isHov = hovered === a.id;
+              const isPast = a.date < today;
+              const canMarkNoShow = isPast && a.status !== 'cancelled' && !a.isNoShow;
               return (
                 <tr
                   key={a.id}
@@ -181,13 +196,25 @@ export function AppointmentTable({ appointments }: Props) {
                     </span>
                   </td>
                   <td className="py-4 px-4">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setEditing(a); }}
-                      className="text-xs transition-opacity hover:opacity-70"
-                      style={{ color: 'var(--gold)' }}
-                    >
-                      Düzenle
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setEditing(a); }}
+                        className="text-xs transition-opacity hover:opacity-70"
+                        style={{ color: 'var(--gold)' }}
+                      >
+                        Düzenle
+                      </button>
+                      {canMarkNoShow && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleNoShow(a.id); }}
+                          disabled={noShowPending === a.id}
+                          className="text-xs transition-opacity hover:opacity-70 disabled:opacity-40"
+                          style={{ color: 'var(--rose)' }}
+                        >
+                          {noShowPending === a.id ? '...' : 'Gelmedi'}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

@@ -24,6 +24,7 @@ function recordToAppointment(record: Airtable.Record<Airtable.FieldSet>): Appoin
     status: f.status as AppointmentStatus,
     notes: f.notes as string | undefined,
     createdAt: f.createdAt as string,
+    isNoShow: Boolean(f.isNoShow),
   };
 }
 
@@ -104,6 +105,10 @@ export async function findAppointmentsByPhone(phone: string): Promise<Appointmen
 
 export async function cancelAppointment(id: string): Promise<void> {
   await table.update(id, { status: 'cancelled' });
+}
+
+export async function markNoShow(id: string): Promise<void> {
+  await table.update(id, { isNoShow: true, status: 'cancelled' });
 }
 
 export async function markReminderSent(id: string): Promise<void> {
