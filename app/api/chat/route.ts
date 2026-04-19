@@ -12,7 +12,7 @@ if (!process.env.ANTHROPIC_API_KEY) {
 }
 
 // M1 — Model constant
-const MODEL = 'claude-haiku-4-5' as const;
+const MODEL = 'claude-sonnet-4-6' as const;
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -25,13 +25,37 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
       const slots = await getAvailableSlots(toolInput.date, duration);
       const available = slots.filter((s) => s.available);
 
-      if (available.length === 0) {
-        return JSON.stringify({ available: false, message: 'Bu tarihte müsait saat bulunmuyor.' });
+      const slotList = available.map((s) => s.time);
+      const requestedTime = toolInput.requested_time;
+
+      // Müşteri spesifik saat istediyse — net yanıt ver
+      if (requestedTime) {
+        const isAvailable = slotList.includes(requestedTime);
+        if (!isAvailable) {
+          const suggestions = slotList.slice(0, 4).join(', ');
+          return JSON.stringify({
+            requested_time_available: false,
+            message: `${requestedTime} saati bu hizmet için müsait değil (başka randevuyla çakışıyor veya çalışma saati dışı). Müşteriye bunu söyle ve şu müsait saatleri öner: ${suggestions || 'Bu gün için uygun saat kalmadı'}.`,
+          });
+        }
+        return JSON.stringify({
+          requested_time_available: true,
+          message: `${requestedTime} saati müsait. Randevu için adı ve telefonu al, sonra book_appointment çağır.`,
+        });
       }
-      return JSON.stringify({ available: true, slots: available.map((s) => s.time) });
+
+      // Saat belirtilmemişse müsait slotları listele
+      if (slotList.length === 0) {
+        return JSON.stringify({ available: false, message: 'Bu tarihte müsait saat yok. find_alternative_slots çağır.' });
+      }
+      return JSON.stringify({ available: true, slots: slotList });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Müsaitlik kontrol edilemedi';
-      return JSON.stringify({ available: false, error: message });
+      console.error('[check_availability] Calendar error:', err);
+      return JSON.stringify({
+        available: false,
+        slots: [],
+        message: 'Takvim şu an kontrol edilemiyor. Müşteriye hangi saati istediğini sor, randevuyu yine de oluştur.',
+      });
     }
   }
 
@@ -49,11 +73,13 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
   }
 
   if (toolName === 'book_appointment') {
-    try {
-      const service = toolInput.service as ServiceType;
-      const duration = SERVICE_DURATIONS[service] ?? 60;
+    const service = toolInput.service as ServiceType;
+    const duration = SERVICE_DURATIONS[service] ?? 60;
 
-      const eventId = await createCalendarEvent({
+    // Google Calendar — hata olsa bile devam et
+    let eventId: string | undefined;
+    try {
+      eventId = await createCalendarEvent({
         summary: `${toolInput.service} - ${toolInput.customer_name}`,
         description: `Müşteri: ${toolInput.customer_name}\nTel: ${toolInput.customer_phone}\n${toolInput.notes ?? ''}`,
         date: toolInput.date,
@@ -61,7 +87,12 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
         durationMinutes: duration,
         attendeePhone: toolInput.customer_phone,
       });
+    } catch (calErr) {
+      console.error('[book_appointment] Google Calendar error (devam ediliyor):', calErr);
+    }
 
+    // Airtable kaydı — bu kritik
+    try {
       const appointment = await createAppointment({
         customerName: toolInput.customer_name,
         customerPhone: toolInput.customer_phone,
@@ -73,10 +104,10 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
         notes: toolInput.notes,
         googleCalendarEventId: eventId,
       });
-
       return JSON.stringify({ success: true, appointmentId: appointment.id });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Randevu oluşturulamadı';
+      console.error('[book_appointment] Airtable error:', err);
+      const message = err instanceof Error ? err.message : 'Randevu kaydedilemedi';
       return JSON.stringify({ success: false, error: message });
     }
   }
@@ -115,18 +146,14 @@ export async function POST(req: NextRequest) {
         (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
       );
 
-      const toolResults = await Promise.all(
-        toolUseBlocks.map(async (block) => ({
-          type: 'tool_result' as const,
-          tool_use_id: block.id,
-          // I1 — Safe cast via Object.entries
-          content: await executeTool(
-            block.name,
-            Object.fromEntries(
-              Object.entries(block.input as Record<string, unknown>).map(([k, v]) => [k, String(v)])
-            )
-          ),
-        }))
+const toolResults = await Promise.all(
+        toolUseBlocks.map(async (block) => {
+          const input = Object.fromEntries(
+            Object.entries(block.input as Record<string, unknown>).map(([k, v]) => [k, String(v)])
+          );
+          const result = await executeTool(block.name, input);
+          return { type: 'tool_result' as const, tool_use_id: block.id, content: result };
+        })
       );
 
       anthropicMessages.push({ role: 'assistant', content: response.content });

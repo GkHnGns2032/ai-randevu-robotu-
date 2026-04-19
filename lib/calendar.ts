@@ -4,10 +4,12 @@ import { format, addMinutes, parseISO } from 'date-fns';
 import { TimeSlot, WORKING_HOURS } from './types';
 
 function getCalendarClient() {
-  const auth = new google.auth.JWT({
-    email: process.env.GOOGLE_CLIENT_EMAIL!,
-    key: process.env.GOOGLE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
-    scopes: ['https://www.googleapis.com/auth/calendar'],
+  const auth = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID!,
+    process.env.GOOGLE_CLIENT_SECRET!
+  );
+  auth.setCredentials({
+    refresh_token: process.env.GOOGLE_REFRESH_TOKEN!,
   });
   return google.calendar({ version: 'v3', auth });
 }

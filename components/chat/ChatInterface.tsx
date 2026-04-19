@@ -3,7 +3,6 @@ import { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '@/lib/types';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 const INITIAL_MESSAGE: ChatMessage = {
   id: 'initial',
@@ -15,10 +14,21 @@ const INITIAL_MESSAGE: ChatMessage = {
 export function ChatInterface() {
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE]);
   const [loading, setLoading] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const lastMsgRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = scrollRef.current;
+    if (!container) return;
+    const last = messages[messages.length - 1];
+    if (last?.role === 'assistant' && lastMsgRef.current) {
+      // Bot mesajı: mesajın başını göster
+      const top = lastMsgRef.current.offsetTop - 12;
+      container.scrollTo({ top, behavior: 'smooth' });
+    } else {
+      // Kullanıcı mesajı veya loading: en alta git
+      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+    }
   }, [messages]);
 
   async function handleSend(text: string) {
@@ -58,11 +68,16 @@ export function ChatInterface() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      <ScrollArea className="flex-1 px-4 py-6">
-        {messages.map((m, i) => (
-          <MessageBubble key={m.id ?? i} message={m} />
-        ))}
+    <div className="flex flex-col flex-1 min-h-0 bg-gray-50">
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-6">
+        {messages.map((m, i) => {
+          const isLast = i === messages.length - 1;
+          return (
+            <div key={m.id ?? i} ref={isLast ? lastMsgRef : null}>
+              <MessageBubble message={m} />
+            </div>
+          );
+        })}
         {loading && (
           <div className="flex gap-3 mb-4">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-rose-400 to-pink-600 flex items-center justify-center text-white text-sm font-bold">
@@ -77,8 +92,7 @@ export function ChatInterface() {
             </div>
           </div>
         )}
-        <div ref={bottomRef} />
-      </ScrollArea>
+      </div>
       <ChatInput onSend={handleSend} disabled={loading} />
     </div>
   );

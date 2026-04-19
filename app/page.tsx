@@ -41,7 +41,7 @@ export default function HomePage() {
 
         {/* Chat */}
         <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-3xl shadow-xl overflow-hidden h-[580px]">
+          <div className="bg-white rounded-3xl shadow-xl overflow-hidden h-[580px] flex flex-col">
             {/* Chat header */}
             <div className="bg-gradient-to-r from-rose-500 to-pink-600 p-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-lg">

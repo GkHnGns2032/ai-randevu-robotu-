@@ -1,3 +1,192 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════
+   THEME TOKENS — 8 premium palettes
+═══════════════════════════════════════════════════════════════ */
+
+/* 1 · Obsidyen Altın — deep black + champagne gold */
+[data-theme="obsidian"] {
+  --bg: #09090C; --bg-card: #131316; --bg-hover: #1C1C21;
+  --border: rgba(255,255,255,0.065); --border-gold: rgba(212,175,110,0.25);
+  --text-1: rgba(255,255,255,0.92); --text-2: rgba(255,255,255,0.55); --text-3: rgba(255,255,255,0.25);
+  --gold: #D4AF6E; --gold-bg: rgba(212,175,110,0.1);
+  --rose: #F09AA0; --mint: #7EDECE; --sky: #7AB8E8; --lavender: #B8A0E8; --amber: #F0C870;
+  --shadow-card: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 20px 60px rgba(0,0,0,0.55);
+  --orb-op: 0.055; --grain-op: 0.035;
+  --sf: #D4AF6E; --sv: #F0E0B0; --st: #C09040;
+  --orb-1: #D4AF6E; --orb-2: #E8A0A8; --mode: dark;
+}
+/* 2 · Fildişi Atölye — warm ivory + espresso */
+[data-theme="ivory"] {
+  --bg: #F3EDE3; --bg-card: #FDFAF6; --bg-hover: #EAE2D5;
+  --border: rgba(0,0,0,0.075); --border-gold: rgba(120,75,15,0.2);
+  --text-1: #1C1008; --text-2: rgba(28,16,8,0.58); --text-3: rgba(28,16,8,0.32);
+  --gold: #8B5A14; --gold-bg: rgba(139,90,20,0.08);
+  --rose: #B03040; --mint: #0E7A68; --sky: #1060A0; --lavender: #5A3A9A; --amber: #A06010;
+  --shadow-card: 0 0 0 1px rgba(255,255,255,0.75) inset, 0 4px 28px rgba(0,0,0,0.07);
+  --orb-op: 0.07; --grain-op: 0.025;
+  --sf: #8B5A14; --sv: #C08030; --st: #6B4010;
+  --orb-1: #C9A96E; --orb-2: #F0A0A8; --mode: light;
+}
+/* 3 · Gece Gülü — dark garnet + blush rose */
+[data-theme="rose"] {
+  --bg: #0D0809; --bg-card: #17100F; --bg-hover: #211615;
+  --border: rgba(255,255,255,0.065); --border-gold: rgba(240,110,130,0.28);
+  --text-1: rgba(255,255,255,0.92); --text-2: rgba(255,255,255,0.55); --text-3: rgba(255,255,255,0.25);
+  --gold: #F07090; --gold-bg: rgba(240,112,144,0.1);
+  --rose: #F09AA0; --mint: #7EDECE; --sky: #7AB8E8; --lavender: #B8A0E8; --amber: #F0C870;
+  --shadow-card: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 20px 60px rgba(0,0,0,0.55);
+  --orb-op: 0.06; --grain-op: 0.035;
+  --sf: #F07090; --sv: #F8B0C0; --st: #D04060;
+  --orb-1: #F07090; --orb-2: #D4AF6E; --mode: dark;
+}
+/* 4 · Derin Okyanus — midnight navy + arctic blue */
+[data-theme="ocean"] {
+  --bg: #070A10; --bg-card: #0E1420; --bg-hover: #141C2C;
+  --border: rgba(255,255,255,0.065); --border-gold: rgba(90,165,230,0.28);
+  --text-1: rgba(255,255,255,0.92); --text-2: rgba(255,255,255,0.55); --text-3: rgba(255,255,255,0.25);
+  --gold: #5AAAE6; --gold-bg: rgba(90,170,230,0.1);
+  --rose: #F09AA0; --mint: #7EDECE; --sky: #7AB8E8; --lavender: #B8A0E8; --amber: #F0C870;
+  --shadow-card: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 20px 60px rgba(0,0,0,0.55);
+  --orb-op: 0.055; --grain-op: 0.035;
+  --sf: #5AAAE6; --sv: #90D0F8; --st: #2A80C0;
+  --orb-1: #5AAAE6; --orb-2: #7EDECE; --mode: dark;
+}
+/* 5 · Zümrüt Orman — deep forest + jade mint */
+[data-theme="emerald"] {
+  --bg: #060A08; --bg-card: #0D1410; --bg-hover: #121D18;
+  --border: rgba(255,255,255,0.065); --border-gold: rgba(60,195,155,0.28);
+  --text-1: rgba(255,255,255,0.92); --text-2: rgba(255,255,255,0.55); --text-3: rgba(255,255,255,0.25);
+  --gold: #3CC39B; --gold-bg: rgba(60,195,155,0.1);
+  --rose: #F09AA0; --mint: #7EDECE; --sky: #7AB8E8; --lavender: #B8A0E8; --amber: #F0C870;
+  --shadow-card: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 20px 60px rgba(0,0,0,0.55);
+  --orb-op: 0.055; --grain-op: 0.035;
+  --sf: #3CC39B; --sv: #80E0C0; --st: #20906A;
+  --orb-1: #3CC39B; --orb-2: #5AAAE6; --mode: dark;
+}
+/* 6 · Ametist — deep plum + violet */
+[data-theme="amethyst"] {
+  --bg: #0A0810; --bg-card: #130E1C; --bg-hover: #1C1428;
+  --border: rgba(255,255,255,0.065); --border-gold: rgba(155,110,235,0.28);
+  --text-1: rgba(255,255,255,0.92); --text-2: rgba(255,255,255,0.55); --text-3: rgba(255,255,255,0.25);
+  --gold: #9B6EEB; --gold-bg: rgba(155,110,235,0.1);
+  --rose: #F09AA0; --mint: #7EDECE; --sky: #7AB8E8; --lavender: #B8A0E8; --amber: #F0C870;
+  --shadow-card: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 20px 60px rgba(0,0,0,0.55);
+  --orb-op: 0.06; --grain-op: 0.035;
+  --sf: #9B6EEB; --sv: #C8A8F8; --st: #6840B8;
+  --orb-1: #9B6EEB; --orb-2: #F07090; --mode: dark;
+}
+/* 7 · Kahve Bej — warm sand + espresso */
+[data-theme="beige"] {
+  --bg: #EDE5D5; --bg-card: #FAF5EC; --bg-hover: #E0D5C2;
+  --border: rgba(0,0,0,0.07); --border-gold: rgba(150,90,20,0.22);
+  --text-1: #1A1008; --text-2: rgba(26,16,8,0.58); --text-3: rgba(26,16,8,0.32);
+  --gold: #966014; --gold-bg: rgba(150,96,20,0.08);
+  --rose: #A82030; --mint: #0A6855; --sky: #0A5090; --lavender: #502090; --amber: #906015;
+  --shadow-card: 0 0 0 1px rgba(255,255,255,0.6) inset, 0 4px 28px rgba(0,0,0,0.06);
+  --orb-op: 0.08; --grain-op: 0.025;
+  --sf: #966014; --sv: #C89040; --st: #6A4010;
+  --orb-1: #C9A96E; --orb-2: #D09080; --mode: light;
+}
+/* 8 · Gece Mavisi — cool slate + indigo */
+[data-theme="midnight"] {
+  --bg: #EEF1F8; --bg-card: #FFFFFF; --bg-hover: #E4E8F4;
+  --border: rgba(0,0,0,0.07); --border-gold: rgba(18,78,165,0.22);
+  --text-1: #0A1428; --text-2: rgba(10,20,40,0.58); --text-3: rgba(10,20,40,0.32);
+  --gold: #124EA5; --gold-bg: rgba(18,78,165,0.07);
+  --rose: #A01830; --mint: #0A6058; --sky: #124EA5; --lavender: #401880; --amber: #805010;
+  --shadow-card: 0 0 0 1px rgba(255,255,255,0.85) inset, 0 4px 28px rgba(0,0,0,0.08);
+  --orb-op: 0.06; --grain-op: 0.02;
+  --sf: #124EA5; --sv: #4080D8; --st: #0A3070;
+  --orb-1: #4080D8; --orb-2: #80A8E0; --mode: light;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BASE
+═══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text-1);
+  -webkit-font-smoothing: antialiased;
+}
+
+.theme-root {
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+.theme-transition, .theme-transition * {
+  transition:
+    background-color 0.35s ease,
+    border-color 0.35s ease,
+    color 0.35s ease,
+    box-shadow 0.35s ease,
+    opacity 0.35s ease !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANIMATIONS
+═══════════════════════════════════════════════════════════════ */
+@keyframes orb-a    { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(40px,-30px) scale(1.06)} 66%{transform:translate(-20px,40px) scale(0.94)} }
+@keyframes orb-b    { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(-35px,25px) scale(1.08)} 66%{transform:translate(25px,-20px) scale(0.92)} }
+@keyframes spin-cw  { to { transform: rotate(360deg); } }
+@keyframes spin-ccw { to { transform: rotate(-360deg); } }
+@keyframes pulse-dot { 0%,100%{opacity:.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.4)} }
+@keyframes ping-ring { 0%{transform:scale(1);opacity:.7} 100%{transform:scale(2.4);opacity:0} }
+@keyframes fade-slide-up { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fade-in  { from{opacity:0} to{opacity:1} }
+@keyframes shimmer  { 0%{background-position:-300% center} 100%{background-position:300% center} }
+@keyframes pop-in   { 0%{opacity:0;transform:scale(0.85) translateY(8px)} 100%{opacity:1;transform:scale(1) translateY(0)} }
+@keyframes float-y  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+@keyframes rotate-border { to { --border-angle: 360deg; } }
+@keyframes swatch-select { 0%{transform:scale(1)} 50%{transform:scale(1.2)} 100%{transform:scale(1)} }
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILITY
+═══════════════════════════════════════════════════════════════ */
+.anim-up  { animation: fade-slide-up 0.5s ease both; }
+.anim-in  { animation: fade-in 0.4s ease both; }
+
+.orb-a    { animation: orb-a 18s ease-in-out infinite; }
+.orb-b    { animation: orb-b 22s ease-in-out infinite; }
+
+.spin-slow { animation: spin-cw  26s linear infinite; }
+.spin-med  { animation: spin-cw  15s linear infinite; }
+.spin-rev  { animation: spin-ccw 20s linear infinite; }
+
+.float    { animation: float-y 4s ease-in-out infinite; }
+
+.gold-shimmer {
+  background: linear-gradient(90deg, var(--sf) 0%, var(--sv) 30%, var(--sf) 60%, var(--st) 100%);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 5s linear infinite;
+}
+
+/* Grain overlay */
+.grain-card { position: relative; }
+.grain-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: var(--grain-op);
+  pointer-events: none;
+  z-index: 0;
+}
+.grain-card > * { position: relative; z-index: 1; }
+
+/* Scrollbar */
+::-webkit-scrollbar       { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--border-gold); }

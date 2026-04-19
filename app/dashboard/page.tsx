@@ -3,65 +3,182 @@ import { listAppointments } from '@/lib/airtable';
 import { StatsOverview } from '@/components/dashboard/StatsOverview';
 import { AppointmentTable } from '@/components/dashboard/AppointmentTable';
 import { AppointmentCalendar } from '@/components/dashboard/AppointmentCalendar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { NextAppointment } from '@/components/dashboard/NextAppointment';
+import { ThemeProvider } from '@/components/dashboard/ThemeProvider';
+import { PalettePicker } from '@/components/dashboard/PalettePicker';
+import { ScrollToTop } from '@/components/dashboard/ScrollToTop';
+import { LiveClock } from '@/components/dashboard/LiveClock';
 import { UserButton } from '@clerk/nextjs';
 import { Scissors } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
+
+function Section({ title, delay, children }: { title: string; delay: number; children: React.ReactNode }) {
+  return (
+    <div
+      className="grain-card relative rounded-2xl overflow-hidden anim-up"
+      style={{
+        animationDelay: `${delay}ms`,
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border)',
+        boxShadow: 'var(--shadow-card)',
+      }}
+    >
+      <div className="px-6 pt-5 pb-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
+        <h2 className="text-[10px] font-semibold tracking-[0.2em] uppercase" style={{ color: 'var(--text-3)' }}>
+          {title}
+        </h2>
+        <div className="h-px flex-1 mx-4" style={{ background: 'linear-gradient(90deg, var(--border), transparent)' }} />
+      </div>
+      <div className="p-6">{children}</div>
+    </div>
+  );
+}
 
 async function DashboardContent() {
   const appointments = await listAppointments();
 
   return (
     <div className="space-y-6">
-      <StatsOverview appointments={appointments} />
+      <NextAppointment appointments={appointments} />
 
-      <Card className="border-0 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold text-gray-800">Haftalık Takvim</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AppointmentCalendar appointments={appointments} />
-        </CardContent>
-      </Card>
+      <div className="anim-up" style={{ animationDelay: '100ms' }}>
+        <StatsOverview appointments={appointments} />
+      </div>
 
-      <Card className="border-0 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold text-gray-800">Tüm Randevular</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
+      <Section title="Haftalık Takvim" delay={200}>
+        <AppointmentCalendar appointments={appointments} />
+      </Section>
+
+      <Section title="Tüm Randevular" delay={300}>
+        <div className="-mx-6 -mb-6">
           <AppointmentTable appointments={appointments} />
-        </CardContent>
-      </Card>
+        </div>
+      </Section>
     </div>
   );
 }
 
 export default function DashboardPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <ThemeProvider>
+      <ScrollToTop />
+      {/* Ambient orbs */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden>
+        <div
+          className="orb-a absolute rounded-full blur-[120px]"
+          style={{ width: 700, height: 700, background: 'var(--gold)', opacity: 'var(--orb-op)', top: '-15%', left: '-10%' }}
+        />
+        <div
+          className="orb-b absolute rounded-full blur-[100px]"
+          style={{ width: 500, height: 500, background: 'var(--rose)', opacity: 'var(--orb-op)', bottom: '5%', right: '-8%' }}
+        />
+        <div
+          className="orb-a absolute rounded-full blur-[140px]"
+          style={{ width: 400, height: 400, background: 'var(--sky)', opacity: 'var(--orb-op)', bottom: '40%', left: '50%', animationDelay: '-6s' }}
+        />
+      </div>
+
       {/* Header */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center">
-              <Scissors size={16} className="text-white" />
+      <header
+        className="sticky top-0 z-50"
+        style={{
+          background: 'color-mix(in srgb, var(--bg) 85%, transparent)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          borderBottom: '1px solid var(--border)',
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+          {/* Logo */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="relative w-11 h-11 flex items-center justify-center">
+              <div className="spin-slow absolute inset-0 rounded-full" style={{ border: '1px solid var(--border-gold)', opacity: 0.6 }} />
+              <div className="spin-rev absolute rounded-full" style={{ inset: 3, border: '1px dashed var(--border-gold)', opacity: 0.35 }} />
+              <div className="spin-med absolute rounded-full" style={{ inset: 7, border: '1px solid var(--border-gold)', opacity: 0.2 }} />
+              <div
+                className="relative w-7 h-7 rounded-full flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, var(--gold), color-mix(in srgb, var(--gold) 60%, #000))' }}
+              >
+                <Scissors size={12} className="text-white" strokeWidth={1.5} />
+              </div>
             </div>
             <div>
-              <p className="text-sm font-bold text-gray-900">Bella Güzellik</p>
-              <p className="text-xs text-gray-400">Admin Dashboard</p>
+              <p className="font-light tracking-[0.06em]" style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '1rem', color: 'var(--text-1)' }}>
+                Bella Güzellik
+              </p>
+              <p className="text-[9px] tracking-[0.22em] uppercase" style={{ color: 'var(--text-3)' }}>
+                Admin Panel
+              </p>
             </div>
           </div>
-          <UserButton />
+
+          {/* Center: live clock */}
+          <div className="flex-1 flex justify-center">
+            <LiveClock />
+          </div>
+
+          {/* Right controls */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Live badge */}
+            <div
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full"
+              style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)' }}
+            >
+              <div className="relative w-1.5 h-1.5">
+                <div className="absolute inset-0 rounded-full" style={{ background: 'var(--mint)', animation: 'pulse-dot 2s ease-in-out infinite' }} />
+                <div className="absolute inset-0 rounded-full" style={{ background: 'var(--mint)', animation: 'ping-ring 2s ease-out infinite' }} />
+              </div>
+              <span className="text-[9px] font-medium tracking-[0.18em] uppercase" style={{ color: 'var(--text-3)' }}>Canlı</span>
+            </div>
+
+            <PalettePicker />
+
+            <UserButton
+              appearance={{
+                elements: {
+                  avatarBox: 'w-9 h-9 ring-1 ring-offset-2',
+                },
+              }}
+            />
+          </div>
         </div>
       </header>
 
       {/* Main */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Suspense fallback={<div className="h-96 flex items-center justify-center text-gray-400 text-sm">Yükleniyor...</div>}>
+      <main className="max-w-7xl mx-auto px-6 py-10">
+        {/* Page heading */}
+        <div className="mb-8 anim-up">
+          <div className="flex items-baseline gap-4">
+            <h1
+              className="font-light leading-tight"
+              style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: 'clamp(2rem, 4vw, 3rem)' }}
+            >
+              <span className="gold-shimmer">Randevu Yönetimi</span>
+            </h1>
+            <div className="h-px flex-1 max-w-xs hidden md:block" style={{ background: 'linear-gradient(90deg, var(--border-gold), transparent)', marginBottom: 8 }} />
+          </div>
+          <p className="text-xs tracking-wider mt-1" style={{ color: 'var(--text-3)' }}>
+            Bella Güzellik Salonu · Genel Bakış
+          </p>
+        </div>
+
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center h-64">
+              <div className="relative w-14 h-14">
+                <div className="spin-slow absolute inset-0 rounded-full" style={{ border: '1px solid var(--border-gold)' }} />
+                <div className="spin-rev absolute rounded-full" style={{ inset: 4, border: '1px dashed var(--border-gold)', opacity: 0.5 }} />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-2 h-2 rounded-full" style={{ background: 'var(--gold)', animation: 'pulse-dot 1.5s ease-in-out infinite' }} />
+                </div>
+              </div>
+            </div>
+          }
+        >
           <DashboardContent />
         </Suspense>
       </main>
-    </div>
+    </ThemeProvider>
   );
 }
