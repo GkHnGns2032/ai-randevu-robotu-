@@ -6,6 +6,7 @@ import { getAvailableSlots, findNextAvailableSlots, createCalendarEvent, deleteC
 import { createAppointment, findAppointmentsByPhone, cancelAppointment, rescheduleAppointment } from '@/lib/airtable';
 import { sendSMS, buildConfirmationMessage } from '@/lib/sms';
 import { isSlotStillAvailable } from '@/lib/booking-lock';
+import { rateLimit } from '@/lib/rate-limit';
 import { SERVICE_DURATIONS, ServiceType } from '@/lib/types';
 
 // I3 — Env var guard at module level
@@ -232,6 +233,12 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
 export async function POST(req: NextRequest) {
   // C1 — Wrap entire handler body in try/catch
   try {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+    const rl = rateLimit(`chat:${ip}`, 20, 60_000); // 20 req/dk
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Çok fazla istek. 1 dakika sonra tekrar deneyin.' }, { status: 429 });
+    }
+
     const { messages } = await req.json() as {
       messages: Array<{ role: 'user' | 'assistant'; content: string }>;
     };
