@@ -246,7 +246,7 @@ export function CustomerList({ appointments }: Props) {
                     <td className="py-3.5 px-4">
                       {c.lastVisit ? (
                         <span className="text-sm" style={{ color: 'var(--text-2)' }}>
-                          {format(parseISO(c.lastVisit), 'd MMM yyyy', { locale: tr })}
+                          {format(parseISO(c.lastVisit), 'd MMMM yyyy', { locale: tr })}
                         </span>
                       ) : (
                         <span style={{ color: 'var(--text-3)' }}>—</span>
@@ -258,7 +258,7 @@ export function CustomerList({ appointments }: Props) {
                           <div className="flex items-center gap-1">
                             <Calendar size={11} style={{ color: 'var(--mint)' }} />
                             <span className="text-xs" style={{ color: 'var(--mint)' }}>
-                              {format(parseISO(c.nextVisit), 'd MMM', { locale: tr })}
+                              {format(parseISO(c.nextVisit), 'd MMMM yyyy', { locale: tr })}
                             </span>
                           </div>
                           <span className="text-[11px] tabular-nums" style={{ color: 'var(--text-3)' }}>{c.nextVisitTime}</span>
@@ -290,7 +290,7 @@ export function CustomerList({ appointments }: Props) {
                                     <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: SVC_COLOR[a.service] ?? 'var(--gold)' }} />
                                     <span className="text-xs font-medium" style={{ color: 'var(--text-1)' }}>{a.service}</span>
                                     <span className="text-xs" style={{ color: 'var(--text-3)' }}>
-                                      {a.date ? format(parseISO(a.date), 'd MMM yyyy', { locale: tr }) : '—'} · {a.time}
+                                      {a.date ? format(parseISO(a.date), 'd MMMM yyyy', { locale: tr }) : '—'} · {a.time}
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-3">

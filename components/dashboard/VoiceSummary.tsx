@@ -14,7 +14,7 @@ function buildScript(appointments: Appointment[]): string {
     .filter((a) => a.date === today)
     .sort((a, b) => a.time.localeCompare(b.time));
 
-  const dayLabel = format(new Date(), 'dd MMMM yyyy, EEEE', { locale: tr });
+  const dayLabel = format(new Date(), 'd MMMM yyyy, EEEE', { locale: tr });
 
   if (todayList.length === 0) {
     return `${dayLabel}. ${CLIENT_CONFIG.businessName} için bugün hiç randevu bulunmuyor. İyi dinlenceler.`;

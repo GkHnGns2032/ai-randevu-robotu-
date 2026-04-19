@@ -36,7 +36,7 @@ export function LiveClock() {
         className="text-[10px] tracking-[0.18em] uppercase mt-0.5"
         style={{ color: 'var(--text-3)' }}
       >
-        {format(now, 'EEEE, d MMM', { locale: tr })}
+        {format(now, 'EEEE, d MMMM yyyy', { locale: tr })}
       </p>
     </div>
   );
