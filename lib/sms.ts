@@ -16,6 +16,18 @@ export async function sendSMS(to: string, message: string): Promise<void> {
   });
 }
 
+export function buildConfirmationMessage(params: {
+  customerName: string;
+  service: string;
+  date: string;
+  time: string;
+}): string {
+  const { customerName, service, date, time } = params;
+  const [y, m, d] = date.split('-');
+  const dateStr = `${d}.${m}.${y}`;
+  return `Merhaba ${customerName}! ${CLIENT_CONFIG.businessName} randevunuz oluşturuldu: ${dateStr} saat ${time} — ${service}. İptal/değişiklik için bizi arayın. Görüşmek üzere 🌸`;
+}
+
 export function buildReminderMessage(params: {
   customerName: string;
   service: string;

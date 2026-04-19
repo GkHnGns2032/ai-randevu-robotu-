@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { APPOINTMENT_TOOLS, SYSTEM_PROMPT } from '@/lib/ai-tools';
 import { getAvailableSlots, findNextAvailableSlots, createCalendarEvent, deleteCalendarEvent } from '@/lib/calendar';
 import { createAppointment, findAppointmentsByPhone, cancelAppointment, rescheduleAppointment } from '@/lib/airtable';
+import { sendSMS, buildConfirmationMessage } from '@/lib/sms';
 import { isSlotStillAvailable } from '@/lib/booking-lock';
 import { SERVICE_DURATIONS, ServiceType } from '@/lib/types';
 
@@ -119,6 +120,19 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
         notes: toolInput.notes,
         googleCalendarEventId: eventId,
       });
+      try {
+        await sendSMS(
+          toolInput.customer_phone,
+          buildConfirmationMessage({
+            customerName: toolInput.customer_name,
+            service,
+            date: toolInput.date,
+            time: toolInput.time,
+          })
+        );
+      } catch (smsErr) {
+        console.error('[book_appointment] SMS onay gönderilemedi (devam):', smsErr);
+      }
       return JSON.stringify({ success: true, appointmentId: appointment.id });
     } catch (err) {
       console.error('[book_appointment] Airtable error:', err);
