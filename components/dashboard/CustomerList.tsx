@@ -1,12 +1,21 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Appointment } from '@/lib/types';
 import { SERVICE_PRICES } from '@/lib/pricing';
 import { format, parseISO, isAfter } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { useState, useMemo } from 'react';
-import { Search, ChevronDown, ChevronUp, Phone, Calendar, TrendingUp, Star } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Search, ChevronDown, ChevronUp, Phone, Calendar, TrendingUp, Star, Trash2, Plus } from 'lucide-react';
+import type { CustomerNote, CustomerTag } from '@/lib/customer-notes';
+
+const TAG_CFG: Record<string, { color: string; bg: string }> = {
+  VIP:    { color: 'var(--gold)',   bg: 'rgba(212,175,110,0.12)' },
+  Alerji: { color: 'var(--rose)',   bg: 'rgba(240,160,168,0.12)' },
+  Zor:    { color: 'var(--amber)',  bg: 'rgba(240,200,112,0.12)' },
+  Yeni:   { color: 'var(--mint)',   bg: 'rgba(126,222,208,0.12)' },
+  Kayıp:  { color: 'var(--text-3)', bg: 'rgba(128,128,128,0.12)' },
+};
 
 interface Props { appointments: Appointment[] }
 
@@ -81,6 +90,48 @@ export function CustomerList({ appointments }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('totalVisits');
   const [sortAsc, setSortAsc] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [notes, setNotes] = useState<Record<string, CustomerNote[]>>({});
+  const [noteLoading, setNoteLoading] = useState<string | null>(null);
+  const [newNote, setNewNote] = useState('');
+  const [newTag, setNewTag] = useState<CustomerTag | ''>('');
+
+  const loadNotes = useCallback(async (phone: string) => {
+    setNoteLoading(phone);
+    try {
+      const res = await fetch(`/api/customer/${encodeURIComponent(phone)}/notes`);
+      const data = await res.json();
+      setNotes((prev) => ({ ...prev, [phone]: data }));
+    } finally {
+      setNoteLoading(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (expanded) loadNotes(expanded);
+  }, [expanded, loadNotes]);
+
+  async function handleAddNote(phone: string) {
+    if (!newNote.trim()) return;
+    const res = await fetch(`/api/customer/${encodeURIComponent(phone)}/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note: newNote.trim(), tag: newTag || undefined }),
+    });
+    if (res.ok) {
+      setNewNote('');
+      setNewTag('');
+      loadNotes(phone);
+    }
+  }
+
+  async function handleDeleteNote(phone: string, id: string) {
+    await fetch(`/api/customer/${encodeURIComponent(phone)}/notes`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    loadNotes(phone);
+  }
 
   const customers = useMemo(() => buildCustomers(appointments), [appointments]);
 
@@ -285,10 +336,11 @@ export function CustomerList({ appointments }: Props) {
                     <tr>
                       <td colSpan={5} style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-hover)' }}>
                         <div className="px-4 pb-4">
+                          {/* Randevu Geçmişi */}
                           <p className="text-[10px] tracking-[0.16em] uppercase mb-2" style={{ color: 'var(--text-3)' }}>
                             Randevu Geçmişi
                           </p>
-                          <div className="space-y-1.5">
+                          <div className="space-y-1.5 mb-4">
                             {customerAppts
                               .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))
                               .map((a) => (
@@ -320,6 +372,82 @@ export function CustomerList({ appointments }: Props) {
                                   </div>
                                 </div>
                               ))}
+                          </div>
+
+                          {/* Müşteri Notları */}
+                          <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
+                            <p className="text-[10px] tracking-[0.16em] uppercase mb-2" style={{ color: 'var(--text-3)' }}>
+                              Notlar & Etiketler
+                            </p>
+
+                            {/* Mevcut notlar */}
+                            {noteLoading === c.phone ? (
+                              <p className="text-xs" style={{ color: 'var(--text-3)' }}>Yükleniyor...</p>
+                            ) : (notes[c.phone] ?? []).length === 0 ? (
+                              <p className="text-xs mb-2" style={{ color: 'var(--text-3)' }}>Henüz not yok.</p>
+                            ) : (
+                              <div className="space-y-1.5 mb-2">
+                                {(notes[c.phone] ?? []).map((n) => {
+                                  const tagCfg = n.tag ? TAG_CFG[n.tag] : null;
+                                  return (
+                                    <div
+                                      key={n.id}
+                                      className="flex items-start justify-between rounded-lg px-3 py-2 gap-3"
+                                      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                                    >
+                                      <div className="flex items-start gap-2 min-w-0">
+                                        {tagCfg && (
+                                          <span
+                                            className="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0"
+                                            style={{ background: tagCfg.bg, color: tagCfg.color }}
+                                          >
+                                            {n.tag}
+                                          </span>
+                                        )}
+                                        <span className="text-xs" style={{ color: 'var(--text-2)' }}>{n.note}</span>
+                                      </div>
+                                      <button
+                                        onClick={() => handleDeleteNote(c.phone, n.id)}
+                                        className="flex-shrink-0 opacity-40 hover:opacity-100 transition-opacity"
+                                        style={{ color: 'var(--rose)' }}
+                                      >
+                                        <Trash2 size={12} />
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {/* Not ekleme formu */}
+                            <div className="flex items-center gap-2 mt-2">
+                              <select
+                                value={newTag}
+                                onChange={(e) => setNewTag(e.target.value as CustomerTag | '')}
+                                className="px-2 py-1.5 rounded-lg text-xs flex-shrink-0"
+                                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+                              >
+                                <option value="">Etiket</option>
+                                {(['VIP', 'Alerji', 'Zor', 'Yeni', 'Kayıp'] as CustomerTag[]).map((t) => (
+                                  <option key={t} value={t}>{t}</option>
+                                ))}
+                              </select>
+                              <input
+                                value={newNote}
+                                onChange={(e) => setNewNote(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleAddNote(c.phone); }}
+                                placeholder="Not ekle..."
+                                className="flex-1 px-3 py-1.5 rounded-lg text-xs"
+                                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
+                              />
+                              <button
+                                onClick={() => handleAddNote(c.phone)}
+                                className="flex-shrink-0 p-1.5 rounded-lg transition-opacity hover:opacity-70"
+                                style={{ background: 'var(--gold)', color: '#fff' }}
+                              >
+                                <Plus size={12} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </td>

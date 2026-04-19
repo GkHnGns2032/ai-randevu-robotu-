@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { APPOINTMENT_TOOLS, SYSTEM_PROMPT } from '@/lib/ai-tools';
 import { getAvailableSlots, findNextAvailableSlots, createCalendarEvent, deleteCalendarEvent } from '@/lib/calendar';
 import { createAppointment, findAppointmentsByPhone, cancelAppointment, rescheduleAppointment } from '@/lib/airtable';
+import { getNotesForCustomer } from '@/lib/customer-notes';
 import { sendSMS, buildConfirmationMessage } from '@/lib/sms';
 import { isSlotStillAvailable } from '@/lib/booking-lock';
 import { rateLimit } from '@/lib/rate-limit';
@@ -144,7 +145,10 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
 
   if (toolName === 'find_appointment') {
     try {
-      const appointments = await findAppointmentsByPhone(toolInput.customer_phone);
+      const [appointments, customerNotes] = await Promise.all([
+        findAppointmentsByPhone(toolInput.customer_phone),
+        getNotesForCustomer(toolInput.customer_phone).catch(() => []),
+      ]);
       if (appointments.length === 0) {
         return JSON.stringify({ found: false, message: 'Bu telefon numarasına kayıtlı aktif randevu bulunamadı.' });
       }
@@ -155,7 +159,8 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
         service: a.service,
         googleCalendarEventId: (a as unknown as Record<string, string>).googleCalendarEventId ?? '',
       }));
-      return JSON.stringify({ found: true, appointments: list });
+      const notes = customerNotes.map((n) => ({ tag: n.tag, note: n.note }));
+      return JSON.stringify({ found: true, appointments: list, customerNotes: notes });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Randevu aranamadı';
       return JSON.stringify({ found: false, error: message });
