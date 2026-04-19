@@ -5,6 +5,7 @@ import { AppointmentTable } from '@/components/dashboard/AppointmentTable';
 import { AppointmentCalendar } from '@/components/dashboard/AppointmentCalendar';
 import { NextAppointment } from '@/components/dashboard/NextAppointment';
 import { InsightsPanel } from '@/components/dashboard/InsightsPanel';
+import { VoiceSummary } from '@/components/dashboard/VoiceSummary';
 import { ThemeProvider } from '@/components/dashboard/ThemeProvider';
 import { PalettePicker } from '@/components/dashboard/PalettePicker';
 import { ScrollToTop } from '@/components/dashboard/ScrollToTop';
@@ -41,7 +42,10 @@ async function DashboardContent() {
 
   return (
     <div className="space-y-6">
-      <NextAppointment appointments={appointments} />
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <NextAppointment appointments={appointments} />
+        <VoiceSummary appointments={appointments} />
+      </div>
 
       <div className="anim-up" style={{ animationDelay: '100ms' }}>
         <StatsOverview appointments={appointments} />
