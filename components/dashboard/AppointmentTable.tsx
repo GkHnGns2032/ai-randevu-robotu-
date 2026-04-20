@@ -123,11 +123,13 @@ export function AppointmentTable({ appointments }: Props) {
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              <th className="text-left py-3 px-5 text-[10px] font-medium tracking-[0.14em] uppercase w-8" style={{ color: 'var(--text-3)' }}>#</th>
-              {['Müşteri', 'Hizmet', 'Personel', 'Tarih & Saat', 'Süre', 'Durum', 'Ödeme', 'İşlem'].map((h) => (
-                <th key={h} className="text-left py-3 px-4 text-[10px] font-medium tracking-[0.14em] uppercase" style={{ color: 'var(--text-3)' }}>
+          <thead style={{ position: 'sticky', top: 0, background: 'color-mix(in srgb, var(--gold) 7%, var(--bg-card))', zIndex: 10 }}>
+            <tr style={{ borderBottom: '1.5px solid color-mix(in srgb, var(--gold) 35%, transparent)' }}>
+              <th className="text-left py-3 px-5 text-[10px] font-semibold tracking-[0.2em] uppercase w-8"
+                style={{ color: 'color-mix(in srgb, var(--gold) 75%, var(--text-2))', fontFamily: '"Courier New", monospace', animation: 'th-in 0.35s ease both' }}>#</th>
+              {['Müşteri', 'Hizmet', 'Personel', 'Tarih & Saat', 'Süre', 'Durum', 'Ödeme', 'İşlem'].map((h, idx) => (
+                <th key={h} className="text-left py-3 px-4 text-[10px] font-semibold tracking-[0.2em] uppercase"
+                  style={{ color: 'color-mix(in srgb, var(--gold) 75%, var(--text-2))', fontFamily: '"Courier New", monospace', animation: `th-in 0.35s ease ${(idx + 1) * 40}ms both` }}>
                   {h}
                 </th>
               ))}
@@ -156,7 +158,7 @@ export function AppointmentTable({ appointments }: Props) {
                   className="anim-up"
                   style={{
                     borderBottom: '1px solid var(--border)',
-                    background: isHov ? 'var(--bg-hover)' : 'transparent',
+                    background: isHov ? 'var(--bg-hover)' : i % 2 === 1 ? 'color-mix(in srgb, var(--bg-hover) 35%, transparent)' : 'transparent',
                     transition: 'background 0.15s ease',
                     animationDelay: `${i * 25}ms`,
                   }}
@@ -233,6 +235,7 @@ export function AppointmentTable({ appointments }: Props) {
         </table>
       </div>{/* overflow-x-auto */}
 
+      <style>{`@keyframes th-in { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:translateY(0); } }`}</style>
       {editing && (
         <AppointmentForm
           appointment={editing}

@@ -33,10 +33,10 @@ function Section({ title, delay, children }: { title: string; delay: number; chi
       }}
     >
       <div className="px-6 pt-5 pb-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
-        <h2 className="text-[10px] font-semibold tracking-[0.2em] uppercase" style={{ color: 'var(--text-3)' }}>
+        <h2 className="text-[11px] font-semibold tracking-[0.22em] uppercase" style={{ color: 'color-mix(in srgb, var(--amber) 80%, var(--gold))', fontFamily: '"Courier New", monospace' }}>
           {title}
         </h2>
-        <div className="h-px flex-1 mx-4" style={{ background: 'linear-gradient(90deg, var(--border), transparent)' }} />
+        <div className="h-px flex-1 mx-4" style={{ background: 'linear-gradient(90deg, color-mix(in srgb, var(--amber) 35%, transparent), transparent)' }} />
       </div>
       <div className="p-6">{children}</div>
     </div>

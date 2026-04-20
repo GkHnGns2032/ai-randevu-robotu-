@@ -257,18 +257,19 @@ export function StaffManager({ initialStaff }: Props) {
       ) : staff.length > 0 ? (
         <div className="overflow-x-auto -mx-6">
           <table className="w-full text-sm">
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                {['Ad', 'Rol', 'Hizmetler', 'Durum', ''].map((h) => (
+            <thead style={{ position: 'sticky', top: 0, background: 'color-mix(in srgb, var(--gold) 7%, var(--bg-card))', zIndex: 10 }}>
+              <tr style={{ borderBottom: '1.5px solid color-mix(in srgb, var(--gold) 35%, transparent)' }}>
+                {['Ad', 'Rol', 'Hizmetler', 'Durum', ''].map((h, idx) => (
                   <th
                     key={h}
-                    className="text-left py-3 px-4 text-[10px] font-medium tracking-[0.14em] uppercase"
-                    style={{ color: 'var(--text-3)' }}
+                    className="text-left py-3 px-4 text-[10px] font-semibold tracking-[0.2em] uppercase"
+                    style={{ color: 'color-mix(in srgb, var(--gold) 75%, var(--text-2))', fontFamily: '"Courier New", monospace', animation: `th-in 0.35s ease ${idx * 40}ms both` }}
                   >
                     {h}
                   </th>
                 ))}
               </tr>
+              <style>{`@keyframes th-in { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:translateY(0); } }`}</style>
             </thead>
             <tbody>
               {staff.map((s, i) => (
@@ -277,6 +278,7 @@ export function StaffManager({ initialStaff }: Props) {
                   className="anim-up"
                   style={{
                     borderBottom: '1px solid var(--border)',
+                    background: i % 2 === 1 ? 'color-mix(in srgb, var(--bg-hover) 35%, transparent)' : 'transparent',
                     animationDelay: `${i * 20}ms`,
                     opacity: s.active ? 1 : 0.55,
                   }}

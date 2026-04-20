@@ -240,30 +240,32 @@ export function CustomerList({ appointments }: Props) {
       {listOpen && (
       <div className="overflow-x-auto -mx-6">
         <table className="w-full text-sm">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+          <thead style={{ position: 'sticky', top: 0, background: 'color-mix(in srgb, var(--gold) 7%, var(--bg-card))', zIndex: 10 }}>
+            <tr style={{ borderBottom: '1.5px solid color-mix(in srgb, var(--gold) 35%, transparent)' }}>
               {[
                 { key: 'name' as SortKey, label: 'Müşteri' },
                 { key: 'totalVisits' as SortKey, label: 'Ziyaret' },
                 { key: 'totalSpent' as SortKey, label: 'Harcama' },
                 { key: 'lastVisit' as SortKey, label: 'Son Ziyaret' },
-              ].map(({ key, label }) => (
+              ].map(({ key, label }, idx) => (
                 <th
                   key={key}
                   onClick={() => toggleSort(key)}
-                  className="text-left py-3 px-4 text-[10px] font-medium tracking-[0.14em] uppercase cursor-pointer select-none"
-                  style={{ color: sortKey === key ? 'var(--gold)' : 'var(--text-3)' }}
+                  className="text-left py-3 px-4 text-[10px] font-semibold tracking-[0.2em] uppercase cursor-pointer select-none"
+                  style={{ color: sortKey === key ? 'var(--gold)' : 'color-mix(in srgb, var(--gold) 75%, var(--text-2))', fontFamily: '"Courier New", monospace', animation: `th-in 0.35s ease ${idx * 40}ms both` }}
                 >
                   <span className="flex items-center gap-1">
                     {label} <SortIcon k={key} />
                   </span>
                 </th>
               ))}
-              <th className="text-left py-3 px-4 text-[10px] font-medium tracking-[0.14em] uppercase" style={{ color: 'var(--text-3)' }}>
+              <th className="text-left py-3 px-4 text-[10px] font-semibold tracking-[0.2em] uppercase"
+                style={{ color: 'color-mix(in srgb, var(--gold) 75%, var(--text-2))', fontFamily: '"Courier New", monospace', animation: 'th-in 0.35s ease 160ms both' }}>
                 Sonraki
               </th>
             </tr>
           </thead>
+          <style>{`@keyframes th-in { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:translateY(0); } }`}</style>
           <tbody>
             {filtered.map((c, i) => {
               const isExpanded = expanded === c.phone;
@@ -277,7 +279,7 @@ export function CustomerList({ appointments }: Props) {
                     className="anim-up cursor-pointer"
                     style={{
                       borderBottom: isExpanded ? 'none' : '1px solid var(--border)',
-                      background: isExpanded ? 'var(--bg-hover)' : 'transparent',
+                      background: isExpanded ? 'var(--bg-hover)' : i % 2 === 1 ? 'color-mix(in srgb, var(--bg-hover) 35%, transparent)' : 'transparent',
                       transition: 'background 0.15s ease',
                       animationDelay: `${i * 20}ms`,
                     }}
