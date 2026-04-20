@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Plus, Trash2, User, CheckCircle2, Circle, ChevronDown, ChevronUp } from 'lucide-react';
 import { CLIENT_CONFIG } from '@/config/client';
 import type { Staff } from '@/lib/staff';
+
+interface Props { initialStaff: Staff[] }
 
 const ALL_SERVICES = CLIENT_CONFIG.services.map((s) => s.name);
 
@@ -14,9 +16,9 @@ const ROLE_COLOR: Record<string, string> = {
   'Masör': 'var(--amber)',
 };
 
-export function StaffManager() {
-  const [staff, setStaff] = useState<Staff[]>([]);
-  const [loading, setLoading] = useState(true);
+export function StaffManager({ initialStaff }: Props) {
+  const [staff, setStaff] = useState<Staff[]>(initialStaff);
+  const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState(false);
   const [listOpen, setListOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,10 +39,6 @@ export function StaffManager() {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    load();
-  }, []);
 
   async function handleCreate() {
     if (!newStaff.name.trim()) return;

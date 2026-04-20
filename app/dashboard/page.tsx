@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { listAppointments } from '@/lib/airtable';
+import { listStaff } from '@/lib/staff';
 import { StatsOverview } from '@/components/dashboard/StatsOverview';
 import { AppointmentTable } from '@/components/dashboard/AppointmentTable';
 import { AppointmentCalendar } from '@/components/dashboard/AppointmentCalendar';
@@ -42,7 +43,7 @@ function Section({ title, delay, children }: { title: string; delay: number; chi
 }
 
 async function DashboardContent() {
-  const appointments = await listAppointments();
+  const [appointments, staff] = await Promise.all([listAppointments(), listStaff()]);
 
   return (
     <div className="space-y-6">
@@ -69,7 +70,7 @@ async function DashboardContent() {
       </Section>
 
       <Section title="Personel" delay={450}>
-        <StaffManager />
+        <StaffManager initialStaff={staff} />
       </Section>
 
       <Section title="Tüm Randevular" delay={500}>
