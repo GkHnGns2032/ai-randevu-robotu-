@@ -15,6 +15,7 @@ import { PalettePicker } from '@/components/dashboard/PalettePicker';
 import { ScrollToTop } from '@/components/dashboard/ScrollToTop';
 import { LiveClock } from '@/components/dashboard/LiveClock';
 import { NewAppointmentButton } from '@/components/dashboard/NewAppointmentButton';
+import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { UserButton } from '@clerk/nextjs';
 import { Scissors } from 'lucide-react';
 
@@ -186,19 +187,7 @@ export default function DashboardPage() {
           <NewAppointmentButton />
         </div>
 
-        <Suspense
-          fallback={
-            <div className="flex items-center justify-center h-64">
-              <div className="relative w-14 h-14">
-                <div className="spin-slow absolute inset-0 rounded-full" style={{ border: '1px solid var(--border-gold)' }} />
-                <div className="spin-rev absolute rounded-full" style={{ inset: 4, border: '1px dashed var(--border-gold)', opacity: 0.5 }} />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full" style={{ background: 'var(--gold)', animation: 'pulse-dot 1.5s ease-in-out infinite' }} />
-                </div>
-              </div>
-            </div>
-          }
-        >
+        <Suspense fallback={<DashboardSkeleton />}>
           <DashboardContent />
         </Suspense>
       </main>
