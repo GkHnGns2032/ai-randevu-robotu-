@@ -8,30 +8,61 @@ import { CLIENT_CONFIG } from '@/config/client';
 
 interface Props { appointments: Appointment[] }
 
+function numToTR(n: number): string {
+  const ones = ['', 'bir', 'iki', 'üç', 'dört', 'beş', 'altı', 'yedi', 'sekiz', 'dokuz'];
+  const tens = ['', 'on', 'yirmi', 'otuz', 'kırk', 'elli'];
+  if (n === 0) return 'sıfır';
+  if (n < 10) return ones[n];
+  const t = Math.floor(n / 10);
+  const o = n % 10;
+  return o === 0 ? tens[t] : `${tens[t]} ${ones[o]}`;
+}
+
+function timeToTR(timeStr: string): string {
+  const [h, m] = timeStr.split(':').map(Number);
+  return m === 0 ? `saat ${numToTR(h)}` : `saat ${numToTR(h)} ${numToTR(m)}`;
+}
+
 function buildScript(appointments: Appointment[]): string {
-  const today = format(new Date(), 'yyyy-MM-dd');
+  const now = new Date();
+  const today = format(now, 'yyyy-MM-dd');
+  const dayLabel = format(now, 'd MMMM yyyy, EEEE', { locale: tr });
+
   const todayList = appointments
     .filter((a) => a.date === today)
     .sort((a, b) => a.time.localeCompare(b.time));
-
-  const dayLabel = format(new Date(), 'd MMMM yyyy, EEEE', { locale: tr });
 
   if (todayList.length === 0) {
     return `${dayLabel}. ${CLIENT_CONFIG.businessName} için bugün hiç randevu bulunmuyor. İyi dinlenceler.`;
   }
 
-  const lines = todayList.map((a, i) => {
-    const [h, m] = a.time.split(':');
-    const timeStr = m === '00' ? `saat ${h}` : `saat ${h} ${m}`;
-    return `${i + 1}. randevu: ${timeStr}. ${a.customerName} — ${a.service}.`;
-  });
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 
-  return [
+  const past = todayList.filter((a) => toMin(a.time) < nowMin);
+  const upcoming = todayList.filter((a) => toMin(a.time) >= nowMin);
+
+  const parts: string[] = [
     `${dayLabel}.`,
-    `${CLIENT_CONFIG.businessName} için bugün ${todayList.length} randevunuz var.`,
-    ...lines,
-    'Hepsi bu kadar. İyi günler.',
-  ].join(' ');
+    `${CLIENT_CONFIG.businessName} için bugün toplam ${numToTR(todayList.length)} randevunuz var.`,
+  ];
+
+  if (past.length > 0) {
+    parts.push(`Şu ana kadar ${numToTR(past.length)} tanesi tamamlandı.`);
+  }
+
+  if (upcoming.length === 0) {
+    parts.push('Bugünkü tüm randevular tamamlandı.');
+  } else {
+    const [next, ...rest] = upcoming;
+    parts.push(`Sıradaki ${timeToTR(next.time)}, ${next.customerName}, ${next.service}.`);
+    for (const a of rest) {
+      parts.push(`Sonra ${timeToTR(a.time)}, ${a.customerName}, ${a.service}.`);
+    }
+  }
+
+  parts.push('Hepsi bu kadar. İyi günler.');
+  return parts.join(' ');
 }
 
 type State = 'idle' | 'speaking' | 'unsupported';
