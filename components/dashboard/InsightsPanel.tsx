@@ -2,6 +2,24 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Brain, TrendingUp, Clock, Star, RefreshCw, Sparkles } from 'lucide-react';
 
+function cacheStatus(iso: string): { label: string; color: string; dot: string } {
+  const diffMin = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (diffMin < 1)  return { label: 'Az önce güncellendi', color: 'var(--mint)', dot: 'var(--mint)' };
+  if (diffMin < 20) return { label: `${diffMin} dk önce güncellendi`, color: 'var(--mint)', dot: 'var(--mint)' };
+  if (diffMin < 28) return { label: `${diffMin} dk önce güncellendi`, color: 'var(--amber)', dot: 'var(--amber)' };
+  return { label: `${diffMin} dk önce — yenilemeyi düşün`, color: 'var(--rose)', dot: 'var(--rose)' };
+}
+
+function CacheAge({ generatedAt }: { generatedAt: string }) {
+  const { label, color, dot } = cacheStatus(generatedAt);
+  return (
+    <p className="flex items-center gap-1.5 text-[9px] mt-3">
+      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: dot }} />
+      <span style={{ color }}>{label}</span>
+    </p>
+  );
+}
+
 interface Insights {
   capacityRate: number;
   popularService: { name: string; count: number };
@@ -165,18 +183,17 @@ export function InsightsPanel() {
             <p className="text-sm leading-relaxed" style={{ color: 'var(--text-1)' }}>
               {data.recommendation}
             </p>
-            <p className="text-[9px] mt-3" style={{ color: 'var(--text-3)' }}>
-              {new Date(data.generatedAt).toLocaleString('tr-TR', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'long' })}
-            </p>
+            <CacheAge generatedAt={data.generatedAt} />
           </div>
           <button
             onClick={load}
             disabled={spinning}
-            className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-opacity hover:opacity-70"
-            style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)' }}
-            title="Yenile"
+            className="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-medium transition-opacity hover:opacity-70"
+            style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-2)', whiteSpace: 'nowrap' }}
+            title="Analizi yenile"
           >
-            <RefreshCw size={12} style={{ color: 'var(--text-2)', animation: spinning ? 'spin 1s linear infinite' : 'none' }} />
+            <RefreshCw size={10} style={{ animation: spinning ? 'spin 1s linear infinite' : 'none' }} />
+            {spinning ? 'Yükleniyor…' : 'Yenile'}
           </button>
         </div>
       </div>
