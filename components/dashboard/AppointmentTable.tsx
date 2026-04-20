@@ -125,7 +125,7 @@ export function AppointmentTable({ appointments }: Props) {
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               <th className="text-left py-3 px-5 text-[10px] font-medium tracking-[0.14em] uppercase w-8" style={{ color: 'var(--text-3)' }}>#</th>
-              {['Müşteri', 'Hizmet', 'Tarih & Saat', 'Süre', 'Durum', 'Ödeme', 'İşlem'].map((h) => (
+              {['Müşteri', 'Hizmet', 'Personel', 'Tarih & Saat', 'Süre', 'Durum', 'Ödeme', 'İşlem'].map((h) => (
                 <th key={h} className="text-left py-3 px-4 text-[10px] font-medium tracking-[0.14em] uppercase" style={{ color: 'var(--text-3)' }}>
                   {h}
                 </th>
@@ -135,7 +135,7 @@ export function AppointmentTable({ appointments }: Props) {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-12 text-center">
+                <td colSpan={9} className="py-12 text-center">
                   <p className="text-xs tracking-widest uppercase" style={{ color: 'var(--text-3)' }}>Sonuç bulunamadı</p>
                 </td>
               </tr>
@@ -174,6 +174,11 @@ export function AppointmentTable({ appointments }: Props) {
                       <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: dot }} />
                       <span style={{ color: 'var(--text-2)' }}>{a.service}</span>
                     </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    <span className="text-sm" style={{ color: a.staffName ? 'var(--text-2)' : 'var(--text-3)' }}>
+                      {a.staffName ?? '—'}
+                    </span>
                   </td>
                   <td className="py-4 px-4">
                     {a.date ? (

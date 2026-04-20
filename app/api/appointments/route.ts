@@ -37,14 +37,14 @@ export async function POST(req: Request) {
   try {
     const body = await req.json() as {
       customerName: string; customerPhone: string; service: string;
-      date: string; time: string; notes?: string;
+      date: string; time: string; notes?: string; staffId?: string;
     };
 
     const duration = SERVICE_DURATIONS[body.service as keyof typeof SERVICE_DURATIONS] ?? 60;
     let eventId: string | undefined;
     try {
       eventId = await createCalendarEvent({
-        summary: `${body.service} - ${body.customerName}`,
+        summary: `${body.service} - ${body.customerName}`,  // staffName yok, sadece hizmet+isim
         description: `Müşteri: ${body.customerName}\nTel: ${body.customerPhone}\n${body.notes ?? ''}`,
         date: body.date, time: body.time, durationMinutes: duration,
         attendeePhone: body.customerPhone,
@@ -61,6 +61,7 @@ export async function POST(req: Request) {
       status: 'confirmed',
       notes: body.notes,
       googleCalendarEventId: eventId,
+      staffId: body.staffId,
     });
 
     return NextResponse.json(appointment);

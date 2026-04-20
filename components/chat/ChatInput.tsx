@@ -66,10 +66,12 @@ export function ChatInput({ onSend, disabled }: Props) {
 
   function toggleMic() {
     if (micState === 'listening') {
-      recognitionRef.current?.stop();
+      try { recognitionRef.current?.stop(); } catch { /* zaten durmuş */ }
       setMicState('idle');
     } else {
-      recognitionRef.current?.start();
+      try {
+        recognitionRef.current?.start();
+      } catch { /* zaten başlamış — state'i yine de listening yap */ }
       setMicState('listening');
     }
   }

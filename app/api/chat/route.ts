@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { APPOINTMENT_TOOLS, SYSTEM_PROMPT } from '@/lib/ai-tools';
 import { getAvailableSlots, findNextAvailableSlots, createCalendarEvent, deleteCalendarEvent } from '@/lib/calendar';
-import { createAppointment, findAppointmentsByPhone, cancelAppointment, rescheduleAppointment, getAppointmentById } from '@/lib/airtable';
+import { createAppointment, findAppointmentsByPhone, cancelAppointment, rescheduleAppointment, getAppointmentById, updateAppointmentFields } from '@/lib/airtable';
+import { listStaff } from '@/lib/staff';
 import { getNotesForCustomer } from '@/lib/customer-notes';
 import { sendSMS, buildConfirmationMessage } from '@/lib/sms';
 import { isSlotStillAvailable } from '@/lib/booking-lock';
@@ -26,7 +27,7 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
     try {
       const service = toolInput.service as ServiceType;
       const duration = SERVICE_DURATIONS[service] ?? 60;
-      const slots = await getAvailableSlots(toolInput.date, duration);
+      const slots = await getAvailableSlots(toolInput.date, duration, toolInput.staff_id || undefined);
       const available = slots.filter((s) => s.available);
 
       const slotList = available.map((s) => s.time);
@@ -81,8 +82,9 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
     const duration = SERVICE_DURATIONS[service] ?? 60;
 
     // Race condition double-check — slot hâlâ boş mu?
+    const staffId = toolInput.staff_id || undefined;
     try {
-      const stillFree = await isSlotStillAvailable(toolInput.date, toolInput.time, duration);
+      const stillFree = await isSlotStillAvailable(toolInput.date, toolInput.time, duration, undefined, staffId);
       if (!stillFree) {
         return JSON.stringify({
           success: false,
@@ -97,8 +99,9 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
     // Google Calendar — hata olsa bile devam et
     let eventId: string | undefined;
     try {
+      const staffLabel = toolInput.staff_name ? ` (${toolInput.staff_name})` : '';
       eventId = await createCalendarEvent({
-        summary: `${toolInput.service} - ${toolInput.customer_name}`,
+        summary: `${toolInput.service} - ${toolInput.customer_name}${staffLabel}`,
         description: `Müşteri: ${toolInput.customer_name}\nTel: ${toolInput.customer_phone}\n${toolInput.notes ?? ''}`,
         date: toolInput.date,
         time: toolInput.time,
@@ -121,6 +124,7 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
         status: 'confirmed',
         notes: toolInput.notes,
         googleCalendarEventId: eventId,
+        staffId,
       });
       try {
         await sendSMS(
@@ -183,6 +187,7 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
   if (toolName === 'reschedule_appointment') {
     const service = toolInput.service as ServiceType;
     const duration = SERVICE_DURATIONS[service] ?? 60;
+    const rescheduleStaffId = toolInput.staff_id || undefined;
 
     // Race condition double-check — yeni slot hâlâ boş mu? (mevcut randevu hariç)
     try {
@@ -191,6 +196,7 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
         toolInput.new_time,
         duration,
         toolInput.appointment_id,
+        rescheduleStaffId,
       );
       if (!stillFree) {
         return JSON.stringify({
@@ -223,12 +229,15 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
     } catch { /* calendar hatası kritik değil */ }
 
     try {
-      const updated = await rescheduleAppointment(
-        toolInput.appointment_id,
-        toolInput.new_date,
-        toolInput.new_time,
-        newEventId,
-      );
+      const updated = rescheduleStaffId
+        ? await updateAppointmentFields(toolInput.appointment_id, {
+            date: toolInput.new_date,
+            time: toolInput.new_time,
+            status: 'confirmed',
+            staffId: rescheduleStaffId,
+            ...(newEventId !== undefined ? { googleCalendarEventId: newEventId } : {}),
+          })
+        : await rescheduleAppointment(toolInput.appointment_id, toolInput.new_date, toolInput.new_time, newEventId);
       return JSON.stringify({ success: true, appointment: { date: updated.date, time: updated.time, service: updated.service } });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Değişiklik yapılamadı';
@@ -263,7 +272,21 @@ export async function POST(req: NextRequest) {
     }));
 
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    const systemWithDate = `${SYSTEM_PROMPT}\n\nBugünün tarihi: ${today}. Bundan önceki herhangi bir tarihe randevu oluşturma — müşteriye bugün veya sonrası için tarih belirlemesini söyle.`;
+
+    // Staff listesi — request başında bir kez fetch, system prompt'a inject (ekstra tool round-trip yok)
+    let staffSection = '';
+    try {
+      const allStaff = await listStaff();
+      const active = allStaff.filter((s) => s.active);
+      if (active.length > 0) {
+        const lines = active.map((s) =>
+          `- ID:${s.id} | ${s.name}${s.role ? ` (${s.role})` : ''} | Hizmetler: ${s.services.length > 0 ? s.services.join(', ') : 'tüm hizmetler'}`
+        );
+        staffSection = `\n\nAKTİF PERSONEL LİSTESİ:\n${lines.join('\n')}`;
+      }
+    } catch { /* staff fetch başarısız → personel akışı devre dışı */ }
+
+    const systemWithDate = `${SYSTEM_PROMPT}${staffSection}\n\nBugünün tarihi: ${today}. Bundan önceki herhangi bir tarihe randevu oluşturma — müşteriye bugün veya sonrası için tarih belirlemesini söyle.`;
 
     const cachedSystem = [{ type: 'text' as const, text: systemWithDate, cache_control: { type: 'ephemeral' as const } }];
     const cachedTools = APPOINTMENT_TOOLS.map((tool, idx) =>
@@ -287,7 +310,9 @@ export async function POST(req: NextRequest) {
       const toolResults = await Promise.all(
         toolUseBlocks.map(async (block) => {
           const input = Object.fromEntries(
-            Object.entries(block.input as Record<string, unknown>).map(([k, v]) => [k, String(v)])
+            Object.entries(block.input as Record<string, unknown>)
+              .filter(([, v]) => v !== null && v !== undefined)
+              .map(([k, v]) => [k, String(v)])
           );
           const result = await executeTool(block.name, input);
           return { type: 'tool_result' as const, tool_use_id: block.id, content: result };

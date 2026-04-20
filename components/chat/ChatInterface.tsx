@@ -21,23 +21,6 @@ export function ChatInterface() {
   const lastMsgRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('bella-chat-history');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as ChatMessage[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed.map((m) => ({ ...m, timestamp: new Date(m.timestamp) })));
-        }
-      } catch { /* ignore */ }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (messages.length <= 1) return;
-    localStorage.setItem('bella-chat-history', JSON.stringify(messages));
-  }, [messages]);
-
-  useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
     const last = messages[messages.length - 1];
@@ -92,10 +75,7 @@ export function ChatInterface() {
       {messages.length > 1 && (
         <div className="flex justify-end px-4 pt-2">
           <button
-            onClick={() => {
-              setMessages([INITIAL_MESSAGE]);
-              localStorage.removeItem('bella-chat-history');
-            }}
+            onClick={() => setMessages([INITIAL_MESSAGE])}
             className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
           >
             Yeni Sohbet

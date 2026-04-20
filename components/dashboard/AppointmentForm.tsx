@@ -1,9 +1,11 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { CLIENT_CONFIG } from '@/config/client';
 import { X } from 'lucide-react';
 import type { Appointment, ServiceType, PaymentStatus, PaymentMethod } from '@/lib/types';
+
+interface StaffOption { id: string; name: string; services: string[]; active: boolean; }
 
 interface Props {
   appointment?: Appointment;
@@ -22,9 +24,22 @@ export function AppointmentForm({ appointment, onClose, onSaved }: Props) {
     paymentStatus: (appointment?.paymentStatus ?? 'unpaid') as PaymentStatus,
     paymentMethod: (appointment?.paymentMethod ?? '') as PaymentMethod | '',
     paidAmount: appointment?.paidAmount?.toString() ?? '',
+    staffId: appointment?.staffId ?? '',
   });
+  const [allStaff, setAllStaff] = useState<StaffOption[]>([]);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/staff')
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: StaffOption[]) => setAllStaff(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
+
+  const availableStaff = allStaff.filter(
+    (s) => s.active && (s.services.length === 0 || s.services.includes(form.service)),
+  );
 
   async function submit() {
     setErr(null);
@@ -39,6 +54,7 @@ export function AppointmentForm({ appointment, onClose, onSaved }: Props) {
           ...form,
           paidAmount: form.paidAmount ? Number(form.paidAmount) : undefined,
           paymentMethod: form.paymentMethod || undefined,
+          staffId: form.staffId || undefined,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -70,12 +86,30 @@ export function AppointmentForm({ appointment, onClose, onSaved }: Props) {
             <label className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>Hizmet</label>
             <select
               value={form.service}
-              onChange={(e) => setForm({ ...form, service: e.target.value as ServiceType })}
+              onChange={(e) => setForm({ ...form, service: e.target.value as ServiceType, staffId: '' })}
               className="w-full mt-1 px-3 py-2 rounded-lg text-sm"
               style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
             >
               {CLIENT_CONFIG.services.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}
             </select>
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>Personel (opsiyonel)</label>
+            <select
+              value={form.staffId}
+              onChange={(e) => setForm({ ...form, staffId: e.target.value })}
+              disabled={availableStaff.length === 0}
+              className="w-full mt-1 px-3 py-2 rounded-lg text-sm"
+              style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
+            >
+              <option value="">— Fark etmez —</option>
+              {availableStaff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            {availableStaff.length === 0 && (
+              <p className="text-[10px] mt-1" style={{ color: 'var(--text-3)' }}>
+                Bu hizmet için aktif personel atanmamış. (Airtable → Staff tablosunda bu hizmetin `services` alanına eklenmiş aktif kayıt gerekli.)
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Tarih" type="date" value={form.date} onChange={(v) => setForm({ ...form, date: v })} />

@@ -11,6 +11,7 @@ import { tr } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
 
 interface Props { appointments: Appointment[]; }
+interface StaffOption { id: string; name: string; active: boolean; }
 
 const HOURS = Array.from({ length: 11 }, (_, i) => i + 9);
 const ROW_H = 72;
@@ -93,12 +94,21 @@ export function AppointmentCalendar({ appointments }: Props) {
   const router = useRouter();
   const [weekBase, setWeekBase] = useState(new Date());
   const [localAppts, setLocalAppts] = useState(appointments);
+  const [staffFilter, setStaffFilter] = useState('');
+  const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ date: string; hour: number } | null>(null);
   const [toast, setToast] = useState<Toast>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { setLocalAppts(appointments); }, [appointments]);
+
+  useEffect(() => {
+    fetch('/api/staff')
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: StaffOption[]) => setStaffOptions(Array.isArray(data) ? data.filter((s) => s.active !== false) : []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => () => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -112,7 +122,11 @@ export function AppointmentCalendar({ appointments }: Props) {
 
   const weekStart = startOfWeek(weekBase, { weekStartsOn: 1 });
   const days = Array.from({ length: 6 }, (_, i) => addDays(weekStart, i));
-  const valid = localAppts.filter((a) => a.date && a.time);
+  const valid = localAppts.filter((a) => {
+    if (!a.date || !a.time) return false;
+    if (staffFilter && a.staffId !== staffFilter) return false;
+    return true;
+  });
 
   const isPastSlot = (day: Date, hour: number) => {
     const now = new Date();
@@ -199,7 +213,7 @@ export function AppointmentCalendar({ appointments }: Props) {
       const res = await fetch(`/api/appointments/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: newDate, time: newTime }),
+        body: JSON.stringify({ date: newDate, time: newTime, ...(appt.staffId ? { staffId: appt.staffId } : {}) }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -231,11 +245,22 @@ export function AppointmentCalendar({ appointments }: Props) {
       )}
 
       {/* Week navigator */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-sm font-medium" style={{ color: 'var(--text-2)', fontFamily: '"Cormorant Garamond", serif', letterSpacing: '0.04em' }}>
           {format(weekStart, 'd MMMM', { locale: tr })} — {format(addDays(weekStart, 5), 'd MMMM yyyy', { locale: tr })}
         </p>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 ml-auto">
+          {staffOptions.length > 0 && (
+            <select
+              value={staffFilter}
+              onChange={(e) => setStaffFilter(e.target.value)}
+              className="h-9 px-3 rounded-xl text-xs"
+              style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+            >
+              <option value="">Tüm personel</option>
+              {staffOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          )}
           <button
             onClick={() => setWeekBase((d) => subWeeks(d, 1))}
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95"
