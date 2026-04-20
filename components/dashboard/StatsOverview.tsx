@@ -329,9 +329,9 @@ function UpcomingRevenue({ todayRemaining, tomorrow }: { todayRemaining: number;
   );
 }
 
-/* ── Monthly Goal ─────────────────────────────────────────────── */
-function MonthlyGoal({ current, goal, onGoalChange }: {
-  current: number; goal: number; onGoalChange: (g: number) => void;
+/* ── Goal Card (weekly/monthly) ────────────────────────────────── */
+function GoalCard({ label, current, goal, onGoalChange, showBorderLeft = true }: {
+  label: string; current: number; goal: number; onGoalChange: (g: number) => void; showBorderLeft?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [inputVal, setInputVal] = useState(String(goal));
@@ -357,7 +357,7 @@ function MonthlyGoal({ current, goal, onGoalChange }: {
   return (
     <div
       className="relative flex flex-col justify-center px-7 py-7 overflow-hidden transition-all duration-300"
-      style={{ borderLeft: '1px solid var(--border)' }}
+      style={{ borderLeft: showBorderLeft ? '1px solid var(--border)' : 'none' }}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
     >
@@ -366,7 +366,7 @@ function MonthlyGoal({ current, goal, onGoalChange }: {
 
       <div className="flex items-center justify-between mb-5">
         <p className="text-[9px] tracking-[0.24em] uppercase font-semibold" style={{ color: 'var(--text-3)' }}>
-          Aylık Hedef
+          {label}
         </p>
         <button
           onClick={() => { setInputVal(String(goal)); setEditing(true); }}
@@ -403,17 +403,38 @@ function MonthlyGoal({ current, goal, onGoalChange }: {
 
       {/* Progress bar with milestone dots */}
       <div className="relative mb-3">
-        <div className="relative h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg-hover)' }}>
+        <div
+          className="relative h-2.5 rounded-full overflow-hidden"
+          style={{
+            background: 'color-mix(in srgb, var(--border) 55%, var(--bg-hover))',
+            boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)',
+          }}
+        >
           <div
             className="absolute left-0 top-0 h-full rounded-full"
             style={{
-              width: mounted ? `${pct}%` : '0%',
-              background: `linear-gradient(90deg, ${barColor}80, ${barColor})`,
-              boxShadow: `0 0 12px ${barColor}60`,
+              width: mounted ? (pct > 0 ? `max(${pct}%, 10px)` : '0%') : '0%',
+              background: `linear-gradient(180deg, color-mix(in srgb, ${barColor} 55%, white) 0%, ${barColor} 50%, color-mix(in srgb, ${barColor} 85%, black) 100%)`,
+              boxShadow: `0 0 14px ${barColor}, 0 0 4px ${barColor}90, inset 0 1px 0 rgba(255,255,255,0.35)`,
               transition: 'width 1.2s cubic-bezier(0.16,1,0.3,1)',
               animation: pct > 0 ? 'progress-pulse 3s ease-in-out infinite' : 'none',
             }}
           />
+          {/* Shimmer highlight on fill */}
+          {pct > 0 && (
+            <div
+              className="absolute top-0 h-full pointer-events-none"
+              style={{
+                left: 0,
+                width: mounted ? `max(${pct}%, 10px)` : '0%',
+                background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%)',
+                backgroundSize: '200% 100%',
+                animation: 'shimmer-slide 2.8s linear infinite',
+                transition: 'width 1.2s cubic-bezier(0.16,1,0.3,1)',
+                borderRadius: '9999px',
+              }}
+            />
+          )}
         </div>
         {/* Milestone ticks */}
         {[25, 50, 75].map((m) => (
@@ -423,7 +444,7 @@ function MonthlyGoal({ current, goal, onGoalChange }: {
             style={{
               left: `${m}%`,
               background: pct >= m ? 'transparent' : 'var(--border)',
-              opacity: 0.4,
+              opacity: 0.5,
             }}
           />
         ))}
@@ -675,17 +696,25 @@ function GoldDivider() {
 /* ── Main export ─────────────────────────────────────────────── */
 export function StatsOverview({ appointments }: Props) {
   const [monthlyGoal, setMonthlyGoal] = useState(30000);
+  const [weeklyGoal, setWeeklyGoal] = useState(7500);
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('bella-monthly-goal');
-    if (saved) setMonthlyGoal(parseInt(saved));
+    const savedM = localStorage.getItem('bella-monthly-goal');
+    if (savedM) setMonthlyGoal(parseInt(savedM));
+    const savedW = localStorage.getItem('bella-weekly-goal');
+    if (savedW) setWeeklyGoal(parseInt(savedW));
     setNow(new Date());
   }, []);
 
-  const saveGoal = (g: number) => {
+  const saveMonthlyGoal = (g: number) => {
     setMonthlyGoal(g);
     localStorage.setItem('bella-monthly-goal', String(g));
+  };
+
+  const saveWeeklyGoal = (g: number) => {
+    setWeeklyGoal(g);
+    localStorage.setItem('bella-weekly-goal', String(g));
   };
 
   if (!now) {
@@ -773,16 +802,23 @@ export function StatsOverview({ appointments }: Props) {
 
         <GoldDivider />
 
-        {/* 2 — Upcoming + Monthly goal */}
-        <div className="grid grid-cols-2">
+        {/* 2 — Upcoming + Weekly + Monthly goals */}
+        <div className="grid grid-cols-1 md:grid-cols-3">
           <UpcomingRevenue
             todayRemaining={revenue(todayRemaining)}
             tomorrow={revenue(tomorrowAppts)}
           />
-          <MonthlyGoal
+          <GoalCard
+            label="Haftalık Hedef"
+            current={revenue(weekAppts)}
+            goal={weeklyGoal}
+            onGoalChange={saveWeeklyGoal}
+          />
+          <GoalCard
+            label="Aylık Hedef"
             current={revenue(monthAppts)}
             goal={monthlyGoal}
-            onGoalChange={saveGoal}
+            onGoalChange={saveMonthlyGoal}
           />
         </div>
 
