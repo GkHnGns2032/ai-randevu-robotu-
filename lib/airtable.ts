@@ -28,6 +28,7 @@ function recordToAppointment(record: Airtable.Record<Airtable.FieldSet>): Appoin
     paymentStatus: (f.paymentStatus as PaymentStatus) || undefined,
     paymentMethod: (f.paymentMethod as PaymentMethod) || undefined,
     paidAmount: (f.paidAmount as number) || undefined,
+    googleCalendarEventId: (f.googleCalendarEventId as string) || undefined,
   };
 }
 
@@ -116,6 +117,15 @@ export async function markNoShow(id: string): Promise<void> {
 
 export async function markReminderSent(id: string): Promise<void> {
   await table.update(id, { reminderSent: true });
+}
+
+export async function getAppointmentById(id: string): Promise<Appointment | null> {
+  try {
+    const record = await table.find(id);
+    return recordToAppointment(record);
+  } catch {
+    return null;
+  }
 }
 
 export async function updateAppointmentFields(

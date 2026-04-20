@@ -22,6 +22,7 @@ export interface Appointment {
   paymentStatus?: PaymentStatus;
   paymentMethod?: PaymentMethod;
   paidAmount?: number;
+  googleCalendarEventId?: string;
 }
 
 export interface ChatMessage {
