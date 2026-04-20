@@ -675,10 +675,12 @@ function GoldDivider() {
 /* ── Main export ─────────────────────────────────────────────── */
 export function StatsOverview({ appointments }: Props) {
   const [monthlyGoal, setMonthlyGoal] = useState(30000);
+  const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('bella-monthly-goal');
     if (saved) setMonthlyGoal(parseInt(saved));
+    setNow(new Date());
   }, []);
 
   const saveGoal = (g: number) => {
@@ -686,7 +688,20 @@ export function StatsOverview({ appointments }: Props) {
     localStorage.setItem('bella-monthly-goal', String(g));
   };
 
-  const now = new Date();
+  if (!now) {
+    return (
+      <div
+        className="grain-card relative w-full rounded-2xl overflow-hidden"
+        style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
+          boxShadow: 'var(--shadow-card)',
+          minHeight: 680,
+        }}
+      />
+    );
+  }
+
   const confirmed = appointments.filter((a) => a.status === 'confirmed' && a.date);
 
   const todayAppts     = confirmed.filter((a) => isToday(parseISO(a.date)));

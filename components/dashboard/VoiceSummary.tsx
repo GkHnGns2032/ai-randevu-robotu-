@@ -38,9 +38,11 @@ type State = 'idle' | 'speaking' | 'unsupported';
 
 export function VoiceSummary({ appointments }: Props) {
   const [state, setState] = useState<State>('idle');
+  const [mounted, setMounted] = useState(false);
   const uttRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
+    setMounted(true);
     if (typeof window !== 'undefined' && !window.speechSynthesis) {
       setState('unsupported');
     }
@@ -74,7 +76,7 @@ export function VoiceSummary({ appointments }: Props) {
     setState('speaking');
   }
 
-  if (state === 'unsupported') return null;
+  if (state === 'unsupported' || !mounted) return null;
 
   const today = format(new Date(), 'yyyy-MM-dd');
   const todayCount = appointments.filter((a) => a.date === today).length;

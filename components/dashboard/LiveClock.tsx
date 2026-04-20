@@ -5,12 +5,17 @@ import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
 export function LiveClock() {
-  const [now, setNow] = useState(new Date());
+  const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
+    setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  if (!now) {
+    return <div className="flex flex-col items-center select-none" style={{ height: 44 }} />;
+  }
 
   const [hh, mm, ss] = format(now, 'HH:mm:ss').split(':');
 
