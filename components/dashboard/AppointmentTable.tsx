@@ -1,6 +1,7 @@
 'use client';
 
 import { Appointment } from '@/lib/types';
+import { formatPhoneTR } from '@/lib/format';
 import { PaymentBadge } from './PaymentBadge';
 import { format, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -167,7 +168,7 @@ export function AppointmentTable({ appointments }: Props) {
                   </td>
                   <td className="py-4 px-4">
                     <p className="font-medium" style={{ color: 'var(--text-1)' }}>{a.customerName}</p>
-                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{a.customerPhone}</p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{formatPhoneTR(a.customerPhone)}</p>
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-2">

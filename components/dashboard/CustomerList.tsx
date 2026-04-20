@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
+import { formatPhoneTR } from '@/lib/format';
 import { Appointment } from '@/lib/types';
 import { SERVICE_PRICES } from '@/lib/pricing';
 import { format, parseISO, isAfter } from 'date-fns';
@@ -295,7 +296,7 @@ export function CustomerList({ appointments }: Props) {
                             {isVip && <Star size={10} fill="currentColor" style={{ color: 'var(--gold)' }} />}
                           </div>
                           <span className="text-xs flex items-center gap-1" style={{ color: 'var(--text-3)' }}>
-                            <Phone size={10} />{c.phone}
+                            <Phone size={10} />{formatPhoneTR(c.phone)}
                           </span>
                         </div>
                       </div>
