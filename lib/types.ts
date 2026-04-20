@@ -23,6 +23,8 @@ export interface Appointment {
   paymentMethod?: PaymentMethod;
   paidAmount?: number;
   googleCalendarEventId?: string;
+  staffId?: string;       // Airtable record id (Staff tablosuna link)
+  staffName?: string;     // Airtable Lookup field'dan denormalize — UI/AI için
 }
 
 export interface ChatMessage {

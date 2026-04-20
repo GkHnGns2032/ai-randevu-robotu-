@@ -12,6 +12,7 @@ export async function isSlotStillAvailable(
   time: string,
   durationMinutes: number,
   excludeAppointmentId?: string,
+  staffId?: string,
 ): Promise<boolean> {
   const dayAppointments = await getAppointmentsByDate(date);
   const requestedStart = toMinutes(time);
@@ -20,6 +21,8 @@ export async function isSlotStillAvailable(
   const conflict = dayAppointments.some((a: Appointment) => {
     if (a.status === 'cancelled') return false;
     if (excludeAppointmentId && a.id === excludeAppointmentId) return false;
+    // Staff filtresi: staffId verildiyse sadece aynı personele ait randevularla çakışmayı say
+    if (staffId && a.staffId !== staffId) return false;
     const existingStart = toMinutes(a.time);
     const existingEnd = existingStart + a.durationMinutes;
     return requestedStart < existingEnd && requestedEnd > existingStart;

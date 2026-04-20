@@ -13,6 +13,8 @@ function escapeFormulaString(value: string): string {
 
 function recordToAppointment(record: Airtable.Record<Airtable.FieldSet>): Appointment {
   const f = record.fields as Record<string, unknown>;
+  const staffIdArr = f.staffId as string[] | undefined;
+  const staffNameArr = f.staffName as string[] | undefined;
   return {
     id: record.id,
     customerName: f.customerName as string,
@@ -29,13 +31,15 @@ function recordToAppointment(record: Airtable.Record<Airtable.FieldSet>): Appoin
     paymentMethod: (f.paymentMethod as PaymentMethod) || undefined,
     paidAmount: (f.paidAmount as number) || undefined,
     googleCalendarEventId: (f.googleCalendarEventId as string) || undefined,
+    staffId: Array.isArray(staffIdArr) ? staffIdArr[0] : undefined,
+    staffName: Array.isArray(staffNameArr) ? staffNameArr[0] : undefined,
   };
 }
 
 export async function createAppointment(
   data: Omit<Appointment, 'id' | 'createdAt'> & { googleCalendarEventId?: string }
 ): Promise<Appointment> {
-  const record = await table.create({
+  const fields: Airtable.FieldSet = {
     customerName: data.customerName,
     customerPhone: data.customerPhone,
     service: data.service,
@@ -45,7 +49,11 @@ export async function createAppointment(
     status: data.status,
     notes: data.notes ?? '',
     googleCalendarEventId: data.googleCalendarEventId ?? '',
-  });
+  };
+  if (data.staffId) {
+    fields.staffId = [data.staffId];
+  }
+  const record = await table.create(fields);
   return recordToAppointment(record);
 }
 
@@ -132,7 +140,13 @@ export async function updateAppointmentFields(
   id: string,
   fields: Partial<Omit<Appointment, 'id' | 'createdAt'>> & { googleCalendarEventId?: string }
 ): Promise<Appointment> {
-  const record = await table.update(id, fields as Airtable.FieldSet);
+  // staffId Link field olduğu için array'e çevrilmeli; staffName Lookup olduğu için yazılmaz
+  const { staffId, staffName: _staffName, ...rest } = fields;
+  const payload: Airtable.FieldSet = { ...(rest as Airtable.FieldSet) };
+  if (staffId !== undefined) {
+    payload.staffId = staffId ? [staffId] : [];
+  }
+  const record = await table.update(id, payload);
   return recordToAppointment(record);
 }
 

@@ -55,3 +55,19 @@ export async function updateStaff(id: string, data: Partial<Omit<Staff, 'id'>>):
 export async function deleteStaff(id: string): Promise<void> {
   await staffTable.destroy(id);
 }
+
+export async function listActiveStaffForService(service: string): Promise<Staff[]> {
+  const all = await listStaff();
+  return all.filter(
+    (s) => s.active && (s.services.length === 0 || s.services.includes(service)),
+  );
+}
+
+export async function getStaffById(id: string): Promise<Staff | null> {
+  try {
+    const record = await staffTable.find(id);
+    return toStaff(record);
+  } catch {
+    return null;
+  }
+}
