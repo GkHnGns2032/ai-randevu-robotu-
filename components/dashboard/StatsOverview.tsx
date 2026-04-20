@@ -2,7 +2,7 @@
 
 import { Appointment, ServiceType } from '@/lib/types';
 import {
-  isToday, isThisWeek, isThisMonth, parseISO, isTomorrow, isAfter,
+  isToday, isThisWeek, isThisMonth, parseISO, isTomorrow, isAfter, isYesterday,
   startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, subMonths,
   isWithinInterval,
 } from 'date-fns';
@@ -621,8 +621,35 @@ const APPT_STATS = [
   { key: 'total', label: 'Toplam',   sub: 'onaylı',  color: '#7EDECE' },
 ];
 
-function StatCol({ label, sub, color, value, delay, last }: {
+function MiniDelta({ current, previous, label }: { current: number; previous: number; label: string }) {
+  const delta = current - previous;
+  if (previous === 0 && current === 0) return null;
+  const up = delta > 0;
+  const flat = delta === 0;
+  const color = flat ? 'var(--text-3)' : up ? 'var(--mint)' : 'var(--rose)';
+  const Icon = flat ? Minus : up ? TrendingUp : TrendingDown;
+  return (
+    <div
+      className="flex items-center gap-1 mt-1.5 px-1.5 py-0.5 rounded-full"
+      style={{
+        background: `${color}14`,
+        border: `1px solid ${color}30`,
+      }}
+    >
+      <Icon size={8} style={{ color }} strokeWidth={2.5} />
+      <span className="text-[9px] tabular-nums" style={{ color }}>
+        {delta > 0 ? '+' : ''}{delta}
+      </span>
+      <span className="text-[9px]" style={{ color: 'var(--text-3)' }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function StatCol({ label, sub, color, value, delay, last, previous }: {
   label: string; sub: string; color: string; value: number; delay: number; last: boolean;
+  previous?: { value: number; label: string } | null;
 }) {
   const count = useCountUp(value, delay + 500, 1000);
   const [hov, setHov] = useState(false);
@@ -668,6 +695,8 @@ function StatCol({ label, sub, color, value, delay, last }: {
         </p>
 
         <p className="text-[10px] mt-2" style={{ color: 'var(--text-3)' }}>{sub}</p>
+
+        {previous && <MiniDelta current={value} previous={previous.value} label={previous.label} />}
 
         {/* Bottom slide bar */}
         <div
@@ -734,6 +763,7 @@ export function StatsOverview({ appointments }: Props) {
   const confirmed = appointments.filter((a) => a.status === 'confirmed' && a.date);
 
   const todayAppts     = confirmed.filter((a) => isToday(parseISO(a.date)));
+  const yesterdayAppts = confirmed.filter((a) => isYesterday(parseISO(a.date)));
   const weekAppts      = confirmed.filter((a) => isThisWeek(parseISO(a.date), { weekStartsOn: 1 }));
   const monthAppts     = confirmed.filter((a) => isThisMonth(parseISO(a.date)));
   const lastWeekAppts  = confirmed.filter((a) => isLastWeek(parseISO(a.date)));
@@ -757,6 +787,13 @@ export function StatsOverview({ appointments }: Props) {
     week:  weekAppts.length,
     month: monthAppts.length,
     total: confirmed.length,
+  };
+
+  const previousValues: Record<string, { value: number; label: string } | null> = {
+    today: { value: yesterdayAppts.length, label: 'dünden' },
+    week:  { value: lastWeekAppts.length,  label: 'geçen haftadan' },
+    month: { value: lastMonthAppts.length, label: 'geçen aydan' },
+    total: null,
   };
 
   const allAppts = appointments.filter((a) => a.status === 'confirmed');
@@ -843,6 +880,7 @@ export function StatsOverview({ appointments }: Props) {
               sub={s.sub}
               color={s.color}
               value={values[s.key]}
+              previous={previousValues[s.key]}
               delay={i * 80}
               last={i === APPT_STATS.length - 1}
             />
