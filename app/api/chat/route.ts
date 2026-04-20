@@ -271,7 +271,49 @@ export async function POST(req: NextRequest) {
       content: m.content,
     }));
 
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    // Istanbul = UTC+3, permanent (no DST since 2016)
+    const nowUTC = new Date();
+    const nowTR = new Date(nowUTC.getTime() + 3 * 60 * 60 * 1000);
+    const todayISO = nowTR.toISOString().split('T')[0];
+    const currentTime = `${String(nowTR.getUTCHours()).padStart(2, '0')}:${String(nowTR.getUTCMinutes()).padStart(2, '0')}`;
+    const todayDow = nowTR.getUTCDay(); // 0=Sun, 6=Sat
+
+    const TR_DAYS = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+    const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
+    const addDaysToISO = (iso: string, days: number): string => {
+      const [y, m, d] = iso.split('-').map(Number);
+      const dt = new Date(Date.UTC(y, m - 1, d + days));
+      return dt.toISOString().split('T')[0];
+    };
+    const labelDateTR = (iso: string): string => {
+      const [y, m, d] = iso.split('-').map(Number);
+      const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+      return `${d} ${TR_MONTHS[m - 1]} ${y} ${TR_DAYS[dow]}`;
+    };
+
+    const tomorrowISO = addDaysToISO(todayISO, 1);
+    const dayAfterISO = addDaysToISO(todayISO, 2);
+    const daysToSat = todayDow === 6 ? 7 : (6 - todayDow);
+    const daysToSun = todayDow === 0 ? 7 : (7 - todayDow);
+    const thisSatISO = addDaysToISO(todayISO, daysToSat);
+    const thisSunISO = addDaysToISO(todayISO, daysToSun);
+
+    const next7Lines = Array.from({ length: 7 }, (_, i) => {
+      const iso = addDaysToISO(todayISO, i + 1);
+      return `  • ${TR_DAYS[new Date(iso + 'T00:00:00Z').getUTCDay()]} → ${iso} (${labelDateTR(iso)})`;
+    }).join('\n');
+
+    const dateContext = `BUGÜN BAĞLAMI (Europe/Istanbul):
+- Bugün: ${labelDateTR(todayISO)} (${todayISO})
+- Şu an saat: ${currentTime}
+- Yarın: ${labelDateTR(tomorrowISO)} (${tomorrowISO})
+- Öbür gün: ${labelDateTR(dayAfterISO)} (${dayAfterISO})
+- Bu Cumartesi: ${labelDateTR(thisSatISO)} (${thisSatISO})
+- Bu Pazar: ${labelDateTR(thisSunISO)} (${thisSunISO})
+- Önümüzdeki 7 gün:
+${next7Lines}
+Geçmiş tarihe (${todayISO} öncesi) randevu oluşturma — müşteriye bugün veya sonrası için tarih belirlemesini söyle.`;
 
     // Staff listesi — request başında bir kez fetch, system prompt'a inject (ekstra tool round-trip yok)
     let staffSection = '';
@@ -286,7 +328,7 @@ export async function POST(req: NextRequest) {
       }
     } catch { /* staff fetch başarısız → personel akışı devre dışı */ }
 
-    const systemWithDate = `${SYSTEM_PROMPT}${staffSection}\n\nBugünün tarihi: ${today}. Bundan önceki herhangi bir tarihe randevu oluşturma — müşteriye bugün veya sonrası için tarih belirlemesini söyle.`;
+    const systemWithDate = `${SYSTEM_PROMPT}${staffSection}\n\n${dateContext}`;
 
     const cachedSystem = [{ type: 'text' as const, text: systemWithDate, cache_control: { type: 'ephemeral' as const } }];
     const cachedTools = APPOINTMENT_TOOLS.map((tool, idx) =>
