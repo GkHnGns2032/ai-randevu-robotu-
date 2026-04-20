@@ -2,25 +2,15 @@
 
 import { Appointment, ServiceType } from '@/lib/types';
 import {
-  isToday, isThisWeek, isThisMonth, parseISO, isTomorrow, isAfter,
+  isToday, isThisWeek, isThisMonth, parseISO, isTomorrow, isAfter, isYesterday,
   startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, subMonths,
   isWithinInterval,
 } from 'date-fns';
 import { useEffect, useState, useRef } from 'react';
 import { TrendingUp, TrendingDown, Minus, Pencil } from 'lucide-react';
+import { SERVICE_PRICES as PRICES } from '@/lib/pricing';
 
 interface Props { appointments: Appointment[]; }
-
-const PRICES: Record<ServiceType, number> = {
-  'Saç Kesimi':    350,
-  'Saç Boyama':    950,
-  'Manikür':       280,
-  'Pedikür':       320,
-  'Kaş Tasarımı':  220,
-  'Cilt Bakımı':   650,
-  'Masaj':         500,
-  'Kalıcı Makyaj': 1600,
-};
 
 const SVC_COLORS: Record<string, string> = {
   'Saç Kesimi':    '#D4AF6E',
@@ -339,9 +329,9 @@ function UpcomingRevenue({ todayRemaining, tomorrow }: { todayRemaining: number;
   );
 }
 
-/* ── Monthly Goal ─────────────────────────────────────────────── */
-function MonthlyGoal({ current, goal, onGoalChange }: {
-  current: number; goal: number; onGoalChange: (g: number) => void;
+/* ── Goal Card (weekly/monthly) ────────────────────────────────── */
+function GoalCard({ label, current, goal, onGoalChange, showBorderLeft = true }: {
+  label: string; current: number; goal: number; onGoalChange: (g: number) => void; showBorderLeft?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [inputVal, setInputVal] = useState(String(goal));
@@ -367,7 +357,7 @@ function MonthlyGoal({ current, goal, onGoalChange }: {
   return (
     <div
       className="relative flex flex-col justify-center px-7 py-7 overflow-hidden transition-all duration-300"
-      style={{ borderLeft: '1px solid var(--border)' }}
+      style={{ borderLeft: showBorderLeft ? '1px solid var(--border)' : 'none' }}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
     >
@@ -376,7 +366,7 @@ function MonthlyGoal({ current, goal, onGoalChange }: {
 
       <div className="flex items-center justify-between mb-5">
         <p className="text-[9px] tracking-[0.24em] uppercase font-semibold" style={{ color: 'var(--text-3)' }}>
-          Aylık Hedef
+          {label}
         </p>
         <button
           onClick={() => { setInputVal(String(goal)); setEditing(true); }}
@@ -413,17 +403,38 @@ function MonthlyGoal({ current, goal, onGoalChange }: {
 
       {/* Progress bar with milestone dots */}
       <div className="relative mb-3">
-        <div className="relative h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg-hover)' }}>
+        <div
+          className="relative h-2.5 rounded-full overflow-hidden"
+          style={{
+            background: 'color-mix(in srgb, var(--border) 55%, var(--bg-hover))',
+            boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)',
+          }}
+        >
           <div
             className="absolute left-0 top-0 h-full rounded-full"
             style={{
-              width: mounted ? `${pct}%` : '0%',
-              background: `linear-gradient(90deg, ${barColor}80, ${barColor})`,
-              boxShadow: `0 0 12px ${barColor}60`,
+              width: mounted ? (pct > 0 ? `max(${pct}%, 10px)` : '0%') : '0%',
+              background: `linear-gradient(180deg, color-mix(in srgb, ${barColor} 55%, white) 0%, ${barColor} 50%, color-mix(in srgb, ${barColor} 85%, black) 100%)`,
+              boxShadow: `0 0 14px ${barColor}, 0 0 4px ${barColor}90, inset 0 1px 0 rgba(255,255,255,0.35)`,
               transition: 'width 1.2s cubic-bezier(0.16,1,0.3,1)',
               animation: pct > 0 ? 'progress-pulse 3s ease-in-out infinite' : 'none',
             }}
           />
+          {/* Shimmer highlight on fill */}
+          {pct > 0 && (
+            <div
+              className="absolute top-0 h-full pointer-events-none"
+              style={{
+                left: 0,
+                width: mounted ? `max(${pct}%, 10px)` : '0%',
+                background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%)',
+                backgroundSize: '200% 100%',
+                animation: 'shimmer-slide 2.8s linear infinite',
+                transition: 'width 1.2s cubic-bezier(0.16,1,0.3,1)',
+                borderRadius: '9999px',
+              }}
+            />
+          )}
         </div>
         {/* Milestone ticks */}
         {[25, 50, 75].map((m) => (
@@ -433,7 +444,7 @@ function MonthlyGoal({ current, goal, onGoalChange }: {
             style={{
               left: `${m}%`,
               background: pct >= m ? 'transparent' : 'var(--border)',
-              opacity: 0.4,
+              opacity: 0.5,
             }}
           />
         ))}
@@ -549,6 +560,59 @@ function ServiceBreakdown({ data }: { data: { service: string; count: number; re
   );
 }
 
+/* ── Payment Summary ─────────────────────────────────────────── */
+function PaymentSummary({ collected, pending }: { collected: number; pending: number }) {
+  const collectedCount = useCountUp(collected, 300);
+  const pendingCount   = useCountUp(pending,   500);
+  const total = collected + pending;
+  const pct = total > 0 ? Math.round((collected / total) * 100) : 0;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setTimeout(() => setMounted(true), 400); }, []);
+
+  return (
+    <div className="px-7 py-6">
+      <p className="text-[9px] tracking-[0.24em] uppercase font-semibold mb-5" style={{ color: 'var(--text-3)' }}>
+        Ödeme Durumu
+      </p>
+      <div className="space-y-3.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-2 h-2 rounded-full" style={{ background: 'var(--mint)' }} />
+            <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>Tahsil Edilen</span>
+          </div>
+          <span className="tabular-nums" style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '1.15rem', color: 'var(--mint)', fontWeight: 400 }}>
+            ₺{fmt(collectedCount)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-2 h-2 rounded-full" style={{ background: 'var(--rose)' }} />
+            <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>Bekleyen</span>
+          </div>
+          <span className="tabular-nums" style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '1.15rem', color: 'var(--rose)', fontWeight: 400 }}>
+            ₺{fmt(pendingCount)}
+          </span>
+        </div>
+        <div className="relative h-[3px] rounded-full overflow-hidden" style={{ background: 'var(--bg-hover)' }}>
+          <div
+            className="absolute left-0 top-0 h-full rounded-full"
+            style={{
+              width: mounted ? `${pct}%` : '0%',
+              background: 'linear-gradient(90deg, var(--mint)80, var(--mint))',
+              boxShadow: '0 0 8px var(--mint)70',
+              transition: 'width 1s cubic-bezier(0.16,1,0.3,1)',
+            }}
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--mint)' }}>%{pct} tahsil</span>
+          <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>₺{fmt(total)} toplam</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Bottom stat columns ─────────────────────────────────────── */
 const APPT_STATS = [
   { key: 'today', label: 'Bugün',    sub: 'randevu', color: '#D4AF6E' },
@@ -557,8 +621,35 @@ const APPT_STATS = [
   { key: 'total', label: 'Toplam',   sub: 'onaylı',  color: '#7EDECE' },
 ];
 
-function StatCol({ label, sub, color, value, delay, last }: {
+function MiniDelta({ current, previous, label }: { current: number; previous: number; label: string }) {
+  const delta = current - previous;
+  if (previous === 0 && current === 0) return null;
+  const up = delta > 0;
+  const flat = delta === 0;
+  const color = flat ? 'var(--text-3)' : up ? 'var(--mint)' : 'var(--rose)';
+  const Icon = flat ? Minus : up ? TrendingUp : TrendingDown;
+  return (
+    <div
+      className="flex items-center gap-1 mt-1.5 px-1.5 py-0.5 rounded-full"
+      style={{
+        background: `${color}14`,
+        border: `1px solid ${color}30`,
+      }}
+    >
+      <Icon size={8} style={{ color }} strokeWidth={2.5} />
+      <span className="text-[9px] tabular-nums" style={{ color }}>
+        {delta > 0 ? '+' : ''}{delta}
+      </span>
+      <span className="text-[9px]" style={{ color: 'var(--text-3)' }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function StatCol({ label, sub, color, value, delay, last, previous }: {
   label: string; sub: string; color: string; value: number; delay: number; last: boolean;
+  previous?: { value: number; label: string } | null;
 }) {
   const count = useCountUp(value, delay + 500, 1000);
   const [hov, setHov] = useState(false);
@@ -605,6 +696,8 @@ function StatCol({ label, sub, color, value, delay, last }: {
 
         <p className="text-[10px] mt-2" style={{ color: 'var(--text-3)' }}>{sub}</p>
 
+        {previous && <MiniDelta current={value} previous={previous.value} label={previous.label} />}
+
         {/* Bottom slide bar */}
         <div
           className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[2px] rounded-full transition-all duration-500"
@@ -632,21 +725,45 @@ function GoldDivider() {
 /* ── Main export ─────────────────────────────────────────────── */
 export function StatsOverview({ appointments }: Props) {
   const [monthlyGoal, setMonthlyGoal] = useState(30000);
+  const [weeklyGoal, setWeeklyGoal] = useState(7500);
+  const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('bella-monthly-goal');
-    if (saved) setMonthlyGoal(parseInt(saved));
+    const savedM = localStorage.getItem('bella-monthly-goal');
+    if (savedM) setMonthlyGoal(parseInt(savedM));
+    const savedW = localStorage.getItem('bella-weekly-goal');
+    if (savedW) setWeeklyGoal(parseInt(savedW));
+    setNow(new Date());
   }, []);
 
-  const saveGoal = (g: number) => {
+  const saveMonthlyGoal = (g: number) => {
     setMonthlyGoal(g);
     localStorage.setItem('bella-monthly-goal', String(g));
   };
 
-  const now = new Date();
+  const saveWeeklyGoal = (g: number) => {
+    setWeeklyGoal(g);
+    localStorage.setItem('bella-weekly-goal', String(g));
+  };
+
+  if (!now) {
+    return (
+      <div
+        className="grain-card relative w-full rounded-2xl overflow-hidden"
+        style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
+          boxShadow: 'var(--shadow-card)',
+          minHeight: 680,
+        }}
+      />
+    );
+  }
+
   const confirmed = appointments.filter((a) => a.status === 'confirmed' && a.date);
 
   const todayAppts     = confirmed.filter((a) => isToday(parseISO(a.date)));
+  const yesterdayAppts = confirmed.filter((a) => isYesterday(parseISO(a.date)));
   const weekAppts      = confirmed.filter((a) => isThisWeek(parseISO(a.date), { weekStartsOn: 1 }));
   const monthAppts     = confirmed.filter((a) => isThisMonth(parseISO(a.date)));
   const lastWeekAppts  = confirmed.filter((a) => isLastWeek(parseISO(a.date)));
@@ -671,6 +788,22 @@ export function StatsOverview({ appointments }: Props) {
     month: monthAppts.length,
     total: confirmed.length,
   };
+
+  const previousValues: Record<string, { value: number; label: string } | null> = {
+    today: { value: yesterdayAppts.length, label: 'dünden' },
+    week:  { value: lastWeekAppts.length,  label: 'geçen haftadan' },
+    month: { value: lastMonthAppts.length, label: 'geçen aydan' },
+    total: null,
+  };
+
+  const allAppts = appointments.filter((a) => a.status === 'confirmed');
+  const collected = allAppts.reduce((s, a) => s + (a.paidAmount ?? 0), 0);
+  const pending = allAppts
+    .filter((a) => a.paymentStatus !== 'paid')
+    .reduce((s, a) => {
+      const price = PRICES[a.service as ServiceType] ?? 0;
+      return s + (price - (a.paidAmount ?? 0));
+    }, 0);
 
   return (
     <>
@@ -706,16 +839,23 @@ export function StatsOverview({ appointments }: Props) {
 
         <GoldDivider />
 
-        {/* 2 — Upcoming + Monthly goal */}
-        <div className="grid grid-cols-2">
+        {/* 2 — Upcoming + Weekly + Monthly goals */}
+        <div className="grid grid-cols-1 md:grid-cols-3">
           <UpcomingRevenue
             todayRemaining={revenue(todayRemaining)}
             tomorrow={revenue(tomorrowAppts)}
           />
-          <MonthlyGoal
+          <GoalCard
+            label="Haftalık Hedef"
+            current={revenue(weekAppts)}
+            goal={weeklyGoal}
+            onGoalChange={saveWeeklyGoal}
+          />
+          <GoalCard
+            label="Aylık Hedef"
             current={revenue(monthAppts)}
             goal={monthlyGoal}
-            onGoalChange={saveGoal}
+            onGoalChange={saveMonthlyGoal}
           />
         </div>
 
@@ -723,6 +863,11 @@ export function StatsOverview({ appointments }: Props) {
 
         {/* 3 — Service breakdown */}
         <ServiceBreakdown data={serviceRevenue} />
+
+        <GoldDivider />
+
+        {/* 4 — Payment summary */}
+        <PaymentSummary collected={collected} pending={Math.max(pending, 0)} />
 
         <GoldDivider />
 
@@ -735,6 +880,7 @@ export function StatsOverview({ appointments }: Props) {
               sub={s.sub}
               color={s.color}
               value={values[s.key]}
+              previous={previousValues[s.key]}
               delay={i * 80}
               last={i === APPT_STATS.length - 1}
             />

@@ -72,6 +72,16 @@ export function ChatInterface() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-gray-50">
+      {messages.length > 1 && (
+        <div className="flex justify-end px-4 pt-2">
+          <button
+            onClick={() => setMessages([INITIAL_MESSAGE])}
+            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            Yeni Sohbet
+          </button>
+        </div>
+      )}
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-6">
         {messages.map((m, i) => {
           const isLast = i === messages.length - 1;

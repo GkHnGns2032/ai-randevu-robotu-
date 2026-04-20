@@ -1,8 +1,18 @@
 // lib/calendar.ts
 import { google } from 'googleapis';
-import { format, addMinutes, parseISO } from 'date-fns';
+import { addMinutes, parseISO } from 'date-fns';
 import { TimeSlot, WORKING_HOURS } from './types';
 import { CLIENT_CONFIG } from '@/config/client';
+import { getAppointmentsByDate } from './airtable';
+
+function formatIstanbulTime(date: Date): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Istanbul',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+}
 
 function getCalendarClient() {
   const auth = new google.auth.OAuth2(
@@ -15,10 +25,58 @@ function getCalendarClient() {
   return google.calendar({ version: 'v3', auth });
 }
 
+function toMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+}
+
+// staffId verildiyse Airtable tabanlı — sadece o personelin randevularıyla çakışma kontrolü.
+// GCal bypass: aynı personele paralel rezervasyonu engelle, diğer personelin slotunu etkileme.
+async function getStaffAwareSlots(
+  date: string,
+  durationMinutes: number,
+  staffId: string,
+): Promise<TimeSlot[]> {
+  const startHour = String(WORKING_HOURS.start).padStart(2, '0');
+  const endHour = String(WORKING_HOURS.end).padStart(2, '0');
+  const dayStart = new Date(`${date}T${startHour}:00:00+03:00`);
+  const dayEnd = new Date(`${date}T${endHour}:00:00+03:00`);
+
+  const dayAppointments = await getAppointmentsByDate(date);
+  const staffAppts = dayAppointments.filter(
+    (a) => a.status !== 'cancelled' && a.staffId === staffId,
+  );
+
+  const slots: TimeSlot[] = [];
+  let cursor = dayStart;
+
+  while (addMinutes(cursor, durationMinutes) <= dayEnd) {
+    const time = formatIstanbulTime(cursor);
+    const slotStart = toMinutes(time);
+    const slotEnd = slotStart + durationMinutes;
+
+    const isBlocked = staffAppts.some((a) => {
+      const existingStart = toMinutes(a.time);
+      const existingEnd = existingStart + a.durationMinutes;
+      return slotStart < existingEnd && slotEnd > existingStart;
+    });
+
+    slots.push({ date, time, available: !isBlocked });
+    cursor = addMinutes(cursor, WORKING_HOURS.slotMinutes);
+  }
+
+  return slots;
+}
+
 export async function getAvailableSlots(
   date: string,
-  durationMinutes: number
+  durationMinutes: number,
+  staffId?: string,
 ): Promise<TimeSlot[]> {
+  if (staffId) {
+    return getStaffAwareSlots(date, durationMinutes, staffId);
+  }
+
   const calendar = getCalendarClient();
   const calendarId = process.env.GOOGLE_CALENDAR_ID!;
 
@@ -51,7 +109,7 @@ export async function getAvailableSlots(
 
     slots.push({
       date,
-      time: format(cursor, 'HH:mm'),
+      time: formatIstanbulTime(cursor),
       available: !isBlocked,
     });
 
@@ -64,17 +122,18 @@ export async function getAvailableSlots(
 export async function findNextAvailableSlots(
   fromDate: string,
   durationMinutes: number,
-  count = 3
+  count = 3,
+  staffId?: string,
 ): Promise<TimeSlot[]> {
   const results: TimeSlot[] = [];
   let checkDate = new Date(fromDate);
 
   while (results.length < count) {
-    const dateStr = format(checkDate, 'yyyy-MM-dd');
+    const dateStr = checkDate.toISOString().split('T')[0];
     const dayOfWeek = checkDate.getDay();
 
     if (CLIENT_CONFIG.workingHours.workingDays.includes(dayOfWeek)) {
-      const slots = await getAvailableSlots(dateStr, durationMinutes);
+      const slots = await getAvailableSlots(dateStr, durationMinutes, staffId);
       const available = slots.filter((s) => s.available);
       results.push(...available.slice(0, count - results.length));
     }

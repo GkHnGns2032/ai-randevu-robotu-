@@ -76,7 +76,7 @@ export function NextAppointment({ appointments }: Props) {
         <div className="flex items-center gap-4 flex-shrink-0">
           <div className="text-right">
             <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>
-              {format(next.dt, 'd MMM yyyy', { locale: tr })}
+              {format(next.dt, 'd MMMM yyyy', { locale: tr })}
             </p>
             <p
               className="font-light tabular-nums"

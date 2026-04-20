@@ -17,6 +17,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (s && valid.includes(s)) setThemeState(s);
   }, []);
 
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
   const setTheme = (t: ThemeName) => {
     setThemeState(t);
     localStorage.setItem('bella-theme', t);

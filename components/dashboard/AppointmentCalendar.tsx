@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Appointment } from '@/lib/types';
 import {
   format, startOfWeek, addDays, isSameDay, parseISO,
   addWeeks, subWeeks, isToday, getHours, getMinutes,
 } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
 
 interface Props { appointments: Appointment[]; }
+interface StaffOption { id: string; name: string; active: boolean; }
 
 const HOURS = Array.from({ length: 11 }, (_, i) => i + 9);
 const ROW_H = 72;
@@ -54,7 +56,6 @@ function CurrentTimeLine() {
   );
 }
 
-/* ── Premium service legend badge ── */
 function ServiceBadge({ name, color }: { name: string; color: { bg: string; text: string; border: string } }) {
   return (
     <div
@@ -75,7 +76,6 @@ function ServiceBadge({ name, color }: { name: string; color: { bg: string; text
         (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
       }}
     >
-      {/* Animated sweep on hover */}
       <div
         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
         style={{ background: `linear-gradient(90deg, transparent, ${color.border}20, transparent)` }}
@@ -88,20 +88,179 @@ function ServiceBadge({ name, color }: { name: string; color: { bg: string; text
   );
 }
 
+type Toast = { kind: 'success' | 'error'; message: string } | null;
+
 export function AppointmentCalendar({ appointments }: Props) {
+  const router = useRouter();
   const [weekBase, setWeekBase] = useState(new Date());
+  const [localAppts, setLocalAppts] = useState(appointments);
+  const [staffFilter, setStaffFilter] = useState('');
+  const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ date: string; hour: number } | null>(null);
+  const [toast, setToast] = useState<Toast>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { setLocalAppts(appointments); }, [appointments]);
+
+  useEffect(() => {
+    fetch('/api/staff')
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: StaffOption[]) => setStaffOptions(Array.isArray(data) ? data.filter((s) => s.active !== false) : []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => () => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+  }, []);
+
+  const showToast = (kind: 'success' | 'error', message: string) => {
+    setToast({ kind, message });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2500);
+  };
+
   const weekStart = startOfWeek(weekBase, { weekStartsOn: 1 });
   const days = Array.from({ length: 6 }, (_, i) => addDays(weekStart, i));
-  const valid = appointments.filter((a) => a.date && a.time);
+  const valid = localAppts.filter((a) => {
+    if (!a.date || !a.time) return false;
+    if (staffFilter && a.staffId !== staffFilter) return false;
+    return true;
+  });
+
+  const isPastSlot = (day: Date, hour: number) => {
+    const now = new Date();
+    if (day.toDateString() !== now.toDateString()) return day < new Date(now.toDateString());
+    return hour < now.getHours();
+  };
+
+  const hasConflict = (date: string, hour: number, excludeId: string, duration: number) => {
+    const start = hour * 60;
+    const end = start + duration;
+    return valid.some((a) => {
+      if (a.id === excludeId) return false;
+      if (a.status === 'cancelled') return false;
+      if (a.date !== date) return false;
+      const [h, m] = a.time.split(':').map(Number);
+      const aStart = h * 60 + m;
+      const aEnd = aStart + a.durationMinutes;
+      return start < aEnd && end > aStart;
+    });
+  };
+
+  const canDrop = (day: Date, hour: number): boolean => {
+    if (!draggingId) return false;
+    const appt = valid.find((a) => a.id === draggingId);
+    if (!appt) return false;
+    if (isPastSlot(day, hour)) return false;
+    const dateStr = format(day, 'yyyy-MM-dd');
+    if (hasConflict(dateStr, hour, draggingId, appt.durationMinutes)) return false;
+    return true;
+  };
+
+  const onDragStart = (e: React.DragEvent, appt: Appointment) => {
+    if (appt.status === 'cancelled') { e.preventDefault(); return; }
+    setDraggingId(appt.id);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', appt.id);
+  };
+
+  const onDragEnd = () => {
+    setDraggingId(null);
+    setDropTarget(null);
+  };
+
+  const onDragOver = (e: React.DragEvent, day: Date, hour: number) => {
+    if (!draggingId) return;
+    if (!canDrop(day, hour)) {
+      e.dataTransfer.dropEffect = 'none';
+      return;
+    }
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const dateStr = format(day, 'yyyy-MM-dd');
+    if (!dropTarget || dropTarget.date !== dateStr || dropTarget.hour !== hour) {
+      setDropTarget({ date: dateStr, hour });
+    }
+  };
+
+  const onDragLeave = (e: React.DragEvent, day: Date, hour: number) => {
+    const dateStr = format(day, 'yyyy-MM-dd');
+    if (dropTarget?.date === dateStr && dropTarget?.hour === hour) {
+      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+        setDropTarget(null);
+      }
+    }
+  };
+
+  const onDrop = async (e: React.DragEvent, day: Date, hour: number) => {
+    e.preventDefault();
+    const id = e.dataTransfer.getData('text/plain');
+    const appt = localAppts.find((a) => a.id === id);
+    setDraggingId(null);
+    setDropTarget(null);
+    if (!appt) return;
+    if (!canDrop(day, hour)) return;
+
+    const newDate = format(day, 'yyyy-MM-dd');
+    const newTime = `${String(hour).padStart(2, '0')}:00`;
+    if (appt.date === newDate && appt.time === newTime) return;
+
+    const prev = localAppts;
+    setLocalAppts((curr) => curr.map((a) => a.id === id ? { ...a, date: newDate, time: newTime } : a));
+
+    try {
+      const res = await fetch(`/api/appointments/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: newDate, time: newTime, ...(appt.staffId ? { staffId: appt.staffId } : {}) }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { message?: string }).message || 'Taşınamadı');
+      }
+      showToast('success', `Randevu ${format(day, 'd MMMM', { locale: tr })} ${newTime}'a taşındı`);
+      router.refresh();
+    } catch (err) {
+      setLocalAppts(prev);
+      showToast('error', err instanceof Error ? err.message : 'Taşınamadı');
+    }
+  };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 relative">
+      {/* Toast */}
+      {toast && (
+        <div
+          className="fixed top-6 right-6 z-[200] px-4 py-3 rounded-xl text-sm font-medium shadow-lg"
+          style={{
+            background: toast.kind === 'success' ? 'rgba(60,200,140,0.95)' : 'rgba(230,80,90,0.95)',
+            color: '#fff',
+            backdropFilter: 'blur(6px)',
+            animation: 'fadeInRight 0.25s ease',
+          }}
+        >
+          {toast.message}
+        </div>
+      )}
+
       {/* Week navigator */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-sm font-medium" style={{ color: 'var(--text-2)', fontFamily: '"Cormorant Garamond", serif', letterSpacing: '0.04em' }}>
           {format(weekStart, 'd MMMM', { locale: tr })} — {format(addDays(weekStart, 5), 'd MMMM yyyy', { locale: tr })}
         </p>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 ml-auto">
+          {staffOptions.length > 0 && (
+            <select
+              value={staffFilter}
+              onChange={(e) => setStaffFilter(e.target.value)}
+              className="h-9 px-3 rounded-xl text-xs"
+              style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+            >
+              <option value="">Tüm personel</option>
+              {staffOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          )}
           <button
             onClick={() => setWeekBase((d) => subWeeks(d, 1))}
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95"
@@ -160,7 +319,6 @@ export function AppointmentCalendar({ appointments }: Props) {
                 className="grid grid-cols-7"
                 style={{ borderBottom: '1px solid var(--border)', minHeight: ROW_H }}
               >
-                {/* Time label */}
                 <div
                   className="flex items-start justify-end pt-2 pr-3"
                   style={{ color: 'var(--text-2)', fontSize: '0.8rem', fontFamily: '"Cormorant Garamond", serif', fontWeight: 500 }}
@@ -169,32 +327,84 @@ export function AppointmentCalendar({ appointments }: Props) {
                 </div>
 
                 {days.map((day) => {
+                  const dateStr = format(day, 'yyyy-MM-dd');
                   const appts = valid.filter((a) => {
                     if (!isSameDay(parseISO(a.date), day)) return false;
                     return parseInt(a.time.split(':')[0], 10) === hour;
                   });
+                  const isDropTarget = dropTarget?.date === dateStr && dropTarget?.hour === hour;
+                  const isInvalidTarget = draggingId && !canDrop(day, hour);
+                  const draggingAppt = draggingId ? valid.find((a) => a.id === draggingId) : null;
+
                   return (
                     <div
                       key={day.toISOString()}
                       className="relative p-1"
-                      style={{ borderLeft: '1px solid var(--border)' }}
+                      style={{
+                        borderLeft: '1px solid var(--border)',
+                        background: isDropTarget ? 'rgba(212,175,110,0.12)' : 'transparent',
+                        outline: isDropTarget ? '2px dashed var(--gold)' : 'none',
+                        outlineOffset: '-2px',
+                        transition: 'background 0.12s ease',
+                        opacity: draggingId && isInvalidTarget ? 0.55 : 1,
+                      }}
+                      onDragOver={(e) => onDragOver(e, day, hour)}
+                      onDragLeave={(e) => onDragLeave(e, day, hour)}
+                      onDrop={(e) => onDrop(e, day, hour)}
                     >
+                      {/* Ghost preview */}
+                      {isDropTarget && draggingAppt && (
+                        <div
+                          className="pointer-events-none rounded-lg px-2.5 py-2"
+                          style={{
+                            background: (SVC_COLORS[draggingAppt.service] ?? DEFAULT_COLOR).bg.replace('0.92', '0.35'),
+                            border: `1px dashed ${(SVC_COLORS[draggingAppt.service] ?? DEFAULT_COLOR).border}`,
+                            color: (SVC_COLORS[draggingAppt.service] ?? DEFAULT_COLOR).text,
+                            height: Math.max((draggingAppt.durationMinutes / 60) * ROW_H - 6, 38),
+                            opacity: 0.7,
+                          }}
+                        >
+                          <p className="font-bold truncate" style={{ fontSize: '12px' }}>
+                            {draggingAppt.customerName}
+                          </p>
+                          <p className="truncate font-medium" style={{ fontSize: '10px', opacity: 0.7 }}>
+                            önizleme
+                          </p>
+                        </div>
+                      )}
+
                       {appts.map((a) => {
                         const c = SVC_COLORS[a.service] ?? DEFAULT_COLOR;
                         const h = Math.max((a.durationMinutes / 60) * ROW_H - 6, 38);
+                        const isDraggable = a.status !== 'cancelled';
+                        const isBeingDragged = draggingId === a.id;
                         return (
                           <div
                             key={a.id}
-                            className="rounded-lg px-2.5 py-2 overflow-hidden leading-snug"
+                            draggable={isDraggable}
+                            onDragStart={(e) => onDragStart(e, a)}
+                            onDragEnd={onDragEnd}
+                            className="group relative rounded-lg px-2.5 py-2 overflow-hidden leading-snug"
                             style={{
                               background: c.bg,
                               border: `1px solid ${c.border}`,
                               color: c.text,
                               height: `${h}px`,
                               boxShadow: `0 2px 8px ${c.border}40`,
+                              cursor: isDraggable ? 'grab' : 'default',
+                              opacity: isBeingDragged ? 0.4 : 1,
+                              transition: 'opacity 0.15s ease, transform 0.15s ease',
                             }}
                           >
-                            <p className="font-bold truncate" style={{ fontSize: '12px' }}>
+                            {isDraggable && (
+                              <div
+                                className="absolute top-1 right-1 opacity-0 group-hover:opacity-70 transition-opacity pointer-events-none"
+                                style={{ color: c.text }}
+                              >
+                                <GripVertical size={12} />
+                              </div>
+                            )}
+                            <p className="font-bold truncate pr-3" style={{ fontSize: '12px' }}>
                               {a.customerName}
                             </p>
                             {h > 42 && (
@@ -219,12 +429,19 @@ export function AppointmentCalendar({ appointments }: Props) {
         </div>
       </div>
 
-      {/* Service legend — premium animated badges */}
+      {/* Service legend */}
       <div className="flex flex-wrap gap-2 pt-1">
         {Object.entries(SVC_COLORS).map(([name, c]) => (
           <ServiceBadge key={name} name={name} color={c} />
         ))}
       </div>
+
+      <style jsx>{`
+        @keyframes fadeInRight {
+          from { opacity: 0; transform: translateX(20px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
     </div>
   );
 }

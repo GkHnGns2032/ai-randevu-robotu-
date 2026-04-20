@@ -6,6 +6,8 @@ import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInter
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
+export const revalidate = 1800;
+
 export async function GET() {
   try {
     const appointments = await listAppointments();
@@ -112,6 +114,10 @@ ${statsStr}`,
       thisMonthCount: thisMonth.length,
       recommendation,
       generatedAt: now.toISOString(),
+    }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=1800, stale-while-revalidate=3600',
+      },
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Hata';

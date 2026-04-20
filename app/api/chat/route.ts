@@ -3,7 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { APPOINTMENT_TOOLS, SYSTEM_PROMPT } from '@/lib/ai-tools';
 import { getAvailableSlots, findNextAvailableSlots, createCalendarEvent, deleteCalendarEvent } from '@/lib/calendar';
-import { createAppointment, findAppointmentsByPhone, cancelAppointment, rescheduleAppointment } from '@/lib/airtable';
+import { createAppointment, findAppointmentsByPhone, cancelAppointment, rescheduleAppointment, getAppointmentById, updateAppointmentFields } from '@/lib/airtable';
+import { listStaff } from '@/lib/staff';
+import { getNotesForCustomer } from '@/lib/customer-notes';
+import { sendSMS, buildConfirmationMessage } from '@/lib/sms';
+import { isSlotStillAvailable } from '@/lib/booking-lock';
+import { rateLimit } from '@/lib/rate-limit';
 import { SERVICE_DURATIONS, ServiceType } from '@/lib/types';
 
 // I3 — Env var guard at module level
@@ -22,7 +27,7 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
     try {
       const service = toolInput.service as ServiceType;
       const duration = SERVICE_DURATIONS[service] ?? 60;
-      const slots = await getAvailableSlots(toolInput.date, duration);
+      const slots = await getAvailableSlots(toolInput.date, duration, toolInput.staff_id || undefined);
       const available = slots.filter((s) => s.available);
 
       const slotList = available.map((s) => s.time);
@@ -76,11 +81,27 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
     const service = toolInput.service as ServiceType;
     const duration = SERVICE_DURATIONS[service] ?? 60;
 
+    // Race condition double-check — slot hâlâ boş mu?
+    const staffId = toolInput.staff_id || undefined;
+    try {
+      const stillFree = await isSlotStillAvailable(toolInput.date, toolInput.time, duration, undefined, staffId);
+      if (!stillFree) {
+        return JSON.stringify({
+          success: false,
+          error: 'conflict',
+          message: 'Üzgünüm, bu slot biraz önce başka biri tarafından alındı. Lütfen başka bir saat seçin.',
+        });
+      }
+    } catch (lockErr) {
+      console.error('[book_appointment] Slot doğrulama hatası (devam ediliyor):', lockErr);
+    }
+
     // Google Calendar — hata olsa bile devam et
     let eventId: string | undefined;
     try {
+      const staffLabel = toolInput.staff_name ? ` (${toolInput.staff_name})` : '';
       eventId = await createCalendarEvent({
-        summary: `${toolInput.service} - ${toolInput.customer_name}`,
+        summary: `${toolInput.service} - ${toolInput.customer_name}${staffLabel}`,
         description: `Müşteri: ${toolInput.customer_name}\nTel: ${toolInput.customer_phone}\n${toolInput.notes ?? ''}`,
         date: toolInput.date,
         time: toolInput.time,
@@ -103,7 +124,21 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
         status: 'confirmed',
         notes: toolInput.notes,
         googleCalendarEventId: eventId,
+        staffId,
       });
+      try {
+        await sendSMS(
+          toolInput.customer_phone,
+          buildConfirmationMessage({
+            customerName: toolInput.customer_name,
+            service,
+            date: toolInput.date,
+            time: toolInput.time,
+          })
+        );
+      } catch (smsErr) {
+        console.error('[book_appointment] SMS onay gönderilemedi (devam):', smsErr);
+      }
       return JSON.stringify({ success: true, appointmentId: appointment.id });
     } catch (err) {
       console.error('[book_appointment] Airtable error:', err);
@@ -114,7 +149,10 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
 
   if (toolName === 'find_appointment') {
     try {
-      const appointments = await findAppointmentsByPhone(toolInput.customer_phone);
+      const [appointments, customerNotes] = await Promise.all([
+        findAppointmentsByPhone(toolInput.customer_phone),
+        getNotesForCustomer(toolInput.customer_phone).catch(() => []),
+      ]);
       if (appointments.length === 0) {
         return JSON.stringify({ found: false, message: 'Bu telefon numarasına kayıtlı aktif randevu bulunamadı.' });
       }
@@ -125,7 +163,8 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
         service: a.service,
         googleCalendarEventId: (a as unknown as Record<string, string>).googleCalendarEventId ?? '',
       }));
-      return JSON.stringify({ found: true, appointments: list });
+      const notes = customerNotes.map((n) => ({ tag: n.tag, note: n.note }));
+      return JSON.stringify({ found: true, appointments: list, customerNotes: notes });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Randevu aranamadı';
       return JSON.stringify({ found: false, error: message });
@@ -148,28 +187,57 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
   if (toolName === 'reschedule_appointment') {
     const service = toolInput.service as ServiceType;
     const duration = SERVICE_DURATIONS[service] ?? 60;
+    const rescheduleStaffId = toolInput.staff_id || undefined;
+
+    // Race condition double-check — yeni slot hâlâ boş mu? (mevcut randevu hariç)
+    try {
+      const stillFree = await isSlotStillAvailable(
+        toolInput.new_date,
+        toolInput.new_time,
+        duration,
+        toolInput.appointment_id,
+        rescheduleStaffId,
+      );
+      if (!stillFree) {
+        return JSON.stringify({
+          success: false,
+          error: 'conflict',
+          message: 'Üzgünüm, seçtiğiniz yeni saat biraz önce başka biri tarafından alındı. Lütfen başka bir saat seçin.',
+        });
+      }
+    } catch (lockErr) {
+      console.error('[reschedule_appointment] Slot doğrulama hatası (devam ediliyor):', lockErr);
+    }
+
+    const current = await getAppointmentById(toolInput.appointment_id).catch(() => null);
+
     let newEventId: string | undefined;
     try {
       if (toolInput.old_google_calendar_event_id) {
         try { await deleteCalendarEvent(toolInput.old_google_calendar_event_id); } catch { /* ignore */ }
       }
       newEventId = await createCalendarEvent({
-        summary: `${service} - Randevu`,
-        description: 'Yeniden zamanlandı',
+        summary: current ? `${service} - ${current.customerName}` : `${service} - Randevu`,
+        description: current
+          ? `Müşteri: ${current.customerName}\nTelefon: ${current.customerPhone}\n(Yeniden zamanlandı)`
+          : 'Yeniden zamanlandı',
         date: toolInput.new_date,
         time: toolInput.new_time,
         durationMinutes: duration,
-        attendeePhone: '',
+        attendeePhone: current?.customerPhone ?? '',
       });
     } catch { /* calendar hatası kritik değil */ }
 
     try {
-      const updated = await rescheduleAppointment(
-        toolInput.appointment_id,
-        toolInput.new_date,
-        toolInput.new_time,
-        newEventId,
-      );
+      const updated = rescheduleStaffId
+        ? await updateAppointmentFields(toolInput.appointment_id, {
+            date: toolInput.new_date,
+            time: toolInput.new_time,
+            status: 'confirmed',
+            staffId: rescheduleStaffId,
+            ...(newEventId !== undefined ? { googleCalendarEventId: newEventId } : {}),
+          })
+        : await rescheduleAppointment(toolInput.appointment_id, toolInput.new_date, toolInput.new_time, newEventId);
       return JSON.stringify({ success: true, appointment: { date: updated.date, time: updated.time, service: updated.service } });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Değişiklik yapılamadı';
@@ -183,6 +251,12 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
 export async function POST(req: NextRequest) {
   // C1 — Wrap entire handler body in try/catch
   try {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+    const rl = rateLimit(`chat:${ip}`, 20, 60_000); // 20 req/dk
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Çok fazla istek. 1 dakika sonra tekrar deneyin.' }, { status: 429 });
+    }
+
     const { messages } = await req.json() as {
       messages: Array<{ role: 'user' | 'assistant'; content: string }>;
     };
@@ -197,14 +271,75 @@ export async function POST(req: NextRequest) {
       content: m.content,
     }));
 
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    const systemWithDate = `${SYSTEM_PROMPT}\n\nBugünün tarihi: ${today}. Bundan önceki herhangi bir tarihe randevu oluşturma — müşteriye bugün veya sonrası için tarih belirlemesini söyle.`;
+    // Istanbul = UTC+3, permanent (no DST since 2016)
+    const nowUTC = new Date();
+    const nowTR = new Date(nowUTC.getTime() + 3 * 60 * 60 * 1000);
+    const todayISO = nowTR.toISOString().split('T')[0];
+    const currentTime = `${String(nowTR.getUTCHours()).padStart(2, '0')}:${String(nowTR.getUTCMinutes()).padStart(2, '0')}`;
+    const todayDow = nowTR.getUTCDay(); // 0=Sun, 6=Sat
+
+    const TR_DAYS = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+    const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
+    const addDaysToISO = (iso: string, days: number): string => {
+      const [y, m, d] = iso.split('-').map(Number);
+      const dt = new Date(Date.UTC(y, m - 1, d + days));
+      return dt.toISOString().split('T')[0];
+    };
+    const labelDateTR = (iso: string): string => {
+      const [y, m, d] = iso.split('-').map(Number);
+      const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+      return `${d} ${TR_MONTHS[m - 1]} ${y} ${TR_DAYS[dow]}`;
+    };
+
+    const tomorrowISO = addDaysToISO(todayISO, 1);
+    const dayAfterISO = addDaysToISO(todayISO, 2);
+    const daysToSat = todayDow === 6 ? 7 : (6 - todayDow);
+    const daysToSun = todayDow === 0 ? 7 : (7 - todayDow);
+    const thisSatISO = addDaysToISO(todayISO, daysToSat);
+    const thisSunISO = addDaysToISO(todayISO, daysToSun);
+
+    const next7Lines = Array.from({ length: 7 }, (_, i) => {
+      const iso = addDaysToISO(todayISO, i + 1);
+      return `  • ${TR_DAYS[new Date(iso + 'T00:00:00Z').getUTCDay()]} → ${iso} (${labelDateTR(iso)})`;
+    }).join('\n');
+
+    const dateContext = `BUGÜN BAĞLAMI (Europe/Istanbul):
+- Bugün: ${labelDateTR(todayISO)} (${todayISO})
+- Şu an saat: ${currentTime}
+- Yarın: ${labelDateTR(tomorrowISO)} (${tomorrowISO})
+- Öbür gün: ${labelDateTR(dayAfterISO)} (${dayAfterISO})
+- Bu Cumartesi: ${labelDateTR(thisSatISO)} (${thisSatISO})
+- Bu Pazar: ${labelDateTR(thisSunISO)} (${thisSunISO})
+- Önümüzdeki 7 gün:
+${next7Lines}
+Geçmiş tarihe (${todayISO} öncesi) randevu oluşturma — müşteriye bugün veya sonrası için tarih belirlemesini söyle.`;
+
+    // Staff listesi — request başında bir kez fetch, system prompt'a inject (ekstra tool round-trip yok)
+    let staffSection = '';
+    try {
+      const allStaff = await listStaff();
+      const active = allStaff.filter((s) => s.active);
+      if (active.length > 0) {
+        const lines = active.map((s) =>
+          `- ID:${s.id} | ${s.name}${s.role ? ` (${s.role})` : ''} | Hizmetler: ${s.services.length > 0 ? s.services.join(', ') : 'tüm hizmetler'}`
+        );
+        staffSection = `\n\nAKTİF PERSONEL LİSTESİ:\n${lines.join('\n')}`;
+      }
+    } catch { /* staff fetch başarısız → personel akışı devre dışı */ }
+
+    const systemWithDate = `${SYSTEM_PROMPT}${staffSection}\n\n${dateContext}`;
+
+    const cachedSystem = [{ type: 'text' as const, text: systemWithDate, cache_control: { type: 'ephemeral' as const } }];
+    const cachedTools = APPOINTMENT_TOOLS.map((tool, idx) =>
+      idx === APPOINTMENT_TOOLS.length - 1 ? { ...tool, cache_control: { type: 'ephemeral' as const } } : tool
+    );
 
     let response = await client.messages.create({
       model: MODEL, // M1
       max_tokens: 2048, // I4
-      system: systemWithDate,
-      tools: APPOINTMENT_TOOLS,
+      system: cachedSystem,
+      tools: cachedTools,
       messages: anthropicMessages,
     });
 
@@ -214,10 +349,12 @@ export async function POST(req: NextRequest) {
         (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
       );
 
-const toolResults = await Promise.all(
+      const toolResults = await Promise.all(
         toolUseBlocks.map(async (block) => {
           const input = Object.fromEntries(
-            Object.entries(block.input as Record<string, unknown>).map(([k, v]) => [k, String(v)])
+            Object.entries(block.input as Record<string, unknown>)
+              .filter(([, v]) => v !== null && v !== undefined)
+              .map(([k, v]) => [k, String(v)])
           );
           const result = await executeTool(block.name, input);
           return { type: 'tool_result' as const, tool_use_id: block.id, content: result };
@@ -230,8 +367,8 @@ const toolResults = await Promise.all(
       response = await client.messages.create({
         model: MODEL, // M1
         max_tokens: 2048, // I4
-        system: systemWithDate,
-        tools: APPOINTMENT_TOOLS,
+        system: cachedSystem,
+        tools: cachedTools,
         messages: anthropicMessages,
       });
     }

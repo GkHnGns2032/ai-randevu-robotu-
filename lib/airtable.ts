@@ -1,14 +1,20 @@
 // lib/airtable.ts
 import Airtable from 'airtable';
-import { Appointment, ServiceType, AppointmentStatus } from './types';
+import { Appointment, ServiceType, AppointmentStatus, PaymentStatus, PaymentMethod } from './types';
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY! })
   .base(process.env.AIRTABLE_BASE_ID!);
 
 const table = base(process.env.AIRTABLE_TABLE_NAME!);
 
+function escapeFormulaString(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
 function recordToAppointment(record: Airtable.Record<Airtable.FieldSet>): Appointment {
   const f = record.fields as Record<string, unknown>;
+  const staffIdArr = f.staffId as string[] | undefined;
+  const staffNameArr = f.staffName as string[] | undefined;
   return {
     id: record.id,
     customerName: f.customerName as string,
@@ -20,13 +26,20 @@ function recordToAppointment(record: Airtable.Record<Airtable.FieldSet>): Appoin
     status: f.status as AppointmentStatus,
     notes: f.notes as string | undefined,
     createdAt: f.createdAt as string,
+    isNoShow: Boolean(f.isNoShow),
+    paymentStatus: (f.paymentStatus as PaymentStatus) || undefined,
+    paymentMethod: (f.paymentMethod as PaymentMethod) || undefined,
+    paidAmount: (f.paidAmount as number) || undefined,
+    googleCalendarEventId: (f.googleCalendarEventId as string) || undefined,
+    staffId: Array.isArray(staffIdArr) ? staffIdArr[0] : undefined,
+    staffName: Array.isArray(staffNameArr) ? staffNameArr[0] : undefined,
   };
 }
 
 export async function createAppointment(
   data: Omit<Appointment, 'id' | 'createdAt'> & { googleCalendarEventId?: string }
 ): Promise<Appointment> {
-  const record = await table.create({
+  const fields: Airtable.FieldSet = {
     customerName: data.customerName,
     customerPhone: data.customerPhone,
     service: data.service,
@@ -36,7 +49,11 @@ export async function createAppointment(
     status: data.status,
     notes: data.notes ?? '',
     googleCalendarEventId: data.googleCalendarEventId ?? '',
-  });
+  };
+  if (data.staffId) {
+    fields.staffId = [data.staffId];
+  }
+  const record = await table.create(fields);
   return recordToAppointment(record);
 }
 
@@ -48,13 +65,13 @@ export async function listAppointments(options?: {
   const filterParts: string[] = [];
 
   if (options?.fromDate) {
-    filterParts.push(`IS_AFTER({date}, "${options.fromDate}")`);
+    filterParts.push(`IS_AFTER({date}, "${escapeFormulaString(options.fromDate)}")`);
   }
   if (options?.toDate) {
-    filterParts.push(`IS_BEFORE({date}, "${options.toDate}")`);
+    filterParts.push(`IS_BEFORE({date}, "${escapeFormulaString(options.toDate)}")`);
   }
   if (options?.status) {
-    filterParts.push(`{status} = "${options.status}"`);
+    filterParts.push(`{status} = "${escapeFormulaString(options.status)}"`);
   }
 
   const filterByFormula =
@@ -77,7 +94,7 @@ export async function listAppointments(options?: {
 export async function getAppointmentsByDate(date: string): Promise<Appointment[]> {
   const records = await table
     .select({
-      filterByFormula: `{date} = "${date}"`,
+      filterByFormula: `{date} = "${escapeFormulaString(date)}"`,
       sort: [{ field: 'time', direction: 'asc' }],
     })
     .all();
@@ -85,9 +102,13 @@ export async function getAppointmentsByDate(date: string): Promise<Appointment[]
 }
 
 export async function findAppointmentsByPhone(phone: string): Promise<Appointment[]> {
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length < 10 || cleaned.length > 15) {
+    return [];
+  }
   const records = await table
     .select({
-      filterByFormula: `AND({customerPhone} = "${phone}", {status} != "cancelled")`,
+      filterByFormula: `AND({customerPhone} = "${escapeFormulaString(phone)}", {status} != "cancelled")`,
       sort: [{ field: 'date', direction: 'asc' }, { field: 'time', direction: 'asc' }],
     })
     .all();
@@ -98,8 +119,35 @@ export async function cancelAppointment(id: string): Promise<void> {
   await table.update(id, { status: 'cancelled' });
 }
 
+export async function markNoShow(id: string): Promise<void> {
+  await table.update(id, { isNoShow: true, status: 'cancelled' });
+}
+
 export async function markReminderSent(id: string): Promise<void> {
   await table.update(id, { reminderSent: true });
+}
+
+export async function getAppointmentById(id: string): Promise<Appointment | null> {
+  try {
+    const record = await table.find(id);
+    return recordToAppointment(record);
+  } catch {
+    return null;
+  }
+}
+
+export async function updateAppointmentFields(
+  id: string,
+  fields: Partial<Omit<Appointment, 'id' | 'createdAt'>> & { googleCalendarEventId?: string }
+): Promise<Appointment> {
+  // staffId Link field olduğu için array'e çevrilmeli; staffName Lookup olduğu için yazılmaz
+  const { staffId, staffName: _staffName, ...rest } = fields;
+  const payload: Airtable.FieldSet = { ...(rest as Airtable.FieldSet) };
+  if (staffId !== undefined) {
+    payload.staffId = staffId ? [staffId] : [];
+  }
+  const record = await table.update(id, payload);
+  return recordToAppointment(record);
 }
 
 export async function rescheduleAppointment(

@@ -1,16 +1,21 @@
 import { Suspense } from 'react';
 import { listAppointments } from '@/lib/airtable';
+import { listStaff } from '@/lib/staff';
 import { StatsOverview } from '@/components/dashboard/StatsOverview';
 import { AppointmentTable } from '@/components/dashboard/AppointmentTable';
 import { AppointmentCalendar } from '@/components/dashboard/AppointmentCalendar';
 import { NextAppointment } from '@/components/dashboard/NextAppointment';
+import { TodaySummary } from '@/components/dashboard/TodaySummary';
 import { InsightsPanel } from '@/components/dashboard/InsightsPanel';
 import { VoiceSummary } from '@/components/dashboard/VoiceSummary';
 import { CustomerList } from '@/components/dashboard/CustomerList';
+import { StaffManager } from '@/components/dashboard/StaffManager';
 import { ThemeProvider } from '@/components/dashboard/ThemeProvider';
 import { PalettePicker } from '@/components/dashboard/PalettePicker';
 import { ScrollToTop } from '@/components/dashboard/ScrollToTop';
 import { LiveClock } from '@/components/dashboard/LiveClock';
+import { NewAppointmentButton } from '@/components/dashboard/NewAppointmentButton';
+import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { UserButton } from '@clerk/nextjs';
 import { Scissors } from 'lucide-react';
 
@@ -28,10 +33,10 @@ function Section({ title, delay, children }: { title: string; delay: number; chi
       }}
     >
       <div className="px-6 pt-5 pb-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
-        <h2 className="text-[10px] font-semibold tracking-[0.2em] uppercase" style={{ color: 'var(--text-3)' }}>
+        <h2 className="text-[11px] font-semibold tracking-[0.22em] uppercase" style={{ color: 'color-mix(in srgb, var(--amber) 80%, var(--gold))', fontFamily: '"Courier New", monospace' }}>
           {title}
         </h2>
-        <div className="h-px flex-1 mx-4" style={{ background: 'linear-gradient(90deg, var(--border), transparent)' }} />
+        <div className="h-px flex-1 mx-4" style={{ background: 'linear-gradient(90deg, color-mix(in srgb, var(--amber) 35%, transparent), transparent)' }} />
       </div>
       <div className="p-6">{children}</div>
     </div>
@@ -39,12 +44,13 @@ function Section({ title, delay, children }: { title: string; delay: number; chi
 }
 
 async function DashboardContent() {
-  const appointments = await listAppointments();
+  const [appointments, staff] = await Promise.all([listAppointments(), listStaff()]);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex items-start gap-4 flex-wrap">
         <NextAppointment appointments={appointments} />
+        <TodaySummary appointments={appointments} />
         <VoiceSummary appointments={appointments} />
       </div>
 
@@ -62,6 +68,10 @@ async function DashboardContent() {
 
       <Section title="Müşteriler" delay={400}>
         <CustomerList appointments={appointments} />
+      </Section>
+
+      <Section title="Personel" delay={450}>
+        <StaffManager initialStaff={staff} />
       </Section>
 
       <Section title="Tüm Randevular" delay={500}>
@@ -162,34 +172,22 @@ export default function DashboardPage() {
       {/* Main */}
       <main className="max-w-7xl mx-auto px-6 py-10">
         {/* Page heading */}
-        <div className="mb-8 anim-up">
-          <div className="flex items-baseline gap-4">
+        <div className="mb-8 anim-up flex items-center justify-between gap-4">
+          <div>
             <h1
               className="font-light leading-tight"
               style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: 'clamp(2rem, 4vw, 3rem)' }}
             >
               <span className="gold-shimmer">Randevu Yönetimi</span>
             </h1>
-            <div className="h-px flex-1 max-w-xs hidden md:block" style={{ background: 'linear-gradient(90deg, var(--border-gold), transparent)', marginBottom: 8 }} />
+            <p className="text-xs tracking-wider mt-1" style={{ color: 'var(--text-3)' }}>
+              Bella Güzellik Salonu · Genel Bakış
+            </p>
           </div>
-          <p className="text-xs tracking-wider mt-1" style={{ color: 'var(--text-3)' }}>
-            Bella Güzellik Salonu · Genel Bakış
-          </p>
+          <NewAppointmentButton />
         </div>
 
-        <Suspense
-          fallback={
-            <div className="flex items-center justify-center h-64">
-              <div className="relative w-14 h-14">
-                <div className="spin-slow absolute inset-0 rounded-full" style={{ border: '1px solid var(--border-gold)' }} />
-                <div className="spin-rev absolute rounded-full" style={{ inset: 4, border: '1px dashed var(--border-gold)', opacity: 0.5 }} />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full" style={{ background: 'var(--gold)', animation: 'pulse-dot 1.5s ease-in-out infinite' }} />
-                </div>
-              </div>
-            </div>
-          }
-        >
+        <Suspense fallback={<DashboardSkeleton />}>
           <DashboardContent />
         </Suspense>
       </main>
