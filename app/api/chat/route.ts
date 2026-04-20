@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { APPOINTMENT_TOOLS, SYSTEM_PROMPT } from '@/lib/ai-tools';
 import { getAvailableSlots, findNextAvailableSlots, createCalendarEvent, deleteCalendarEvent } from '@/lib/calendar';
-import { createAppointment, findAppointmentsByPhone, cancelAppointment, rescheduleAppointment } from '@/lib/airtable';
+import { createAppointment, findAppointmentsByPhone, cancelAppointment, rescheduleAppointment, getAppointmentById } from '@/lib/airtable';
 import { getNotesForCustomer } from '@/lib/customer-notes';
 import { sendSMS, buildConfirmationMessage } from '@/lib/sms';
 import { isSlotStillAvailable } from '@/lib/booking-lock';
@@ -203,18 +203,22 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
       console.error('[reschedule_appointment] Slot doğrulama hatası (devam ediliyor):', lockErr);
     }
 
+    const current = await getAppointmentById(toolInput.appointment_id).catch(() => null);
+
     let newEventId: string | undefined;
     try {
       if (toolInput.old_google_calendar_event_id) {
         try { await deleteCalendarEvent(toolInput.old_google_calendar_event_id); } catch { /* ignore */ }
       }
       newEventId = await createCalendarEvent({
-        summary: `${service} - Randevu`,
-        description: 'Yeniden zamanlandı',
+        summary: current ? `${service} - ${current.customerName}` : `${service} - Randevu`,
+        description: current
+          ? `Müşteri: ${current.customerName}\nTelefon: ${current.customerPhone}\n(Yeniden zamanlandı)`
+          : 'Yeniden zamanlandı',
         date: toolInput.new_date,
         time: toolInput.new_time,
         durationMinutes: duration,
-        attendeePhone: '',
+        attendeePhone: current?.customerPhone ?? '',
       });
     } catch { /* calendar hatası kritik değil */ }
 
