@@ -335,51 +335,84 @@ Geçmiş tarihe (${todayISO} öncesi) randevu oluşturma — müşteriye bugün 
       idx === APPOINTMENT_TOOLS.length - 1 ? { ...tool, cache_control: { type: 'ephemeral' as const } } : tool
     );
 
-    let response = await client.messages.create({
-      model: MODEL, // M1
-      max_tokens: 2048, // I4
-      system: cachedSystem,
-      tools: cachedTools,
-      messages: anthropicMessages,
+    const encoder = new TextEncoder();
+
+    const readable = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        try {
+          // Tool use döngüsü — her iterasyon streaming
+          // eslint-disable-next-line no-constant-condition
+          while (true) {
+            const stream = client.messages.stream({
+              model: MODEL,
+              max_tokens: 2048,
+              system: cachedSystem,
+              tools: cachedTools,
+              messages: anthropicMessages,
+            });
+
+            for await (const event of stream) {
+              if (
+                event.type === 'content_block_delta' &&
+                event.delta.type === 'text_delta' &&
+                event.delta.text
+              ) {
+                controller.enqueue(encoder.encode(event.delta.text));
+              }
+            }
+
+            const finalMsg = await stream.finalMessage();
+
+            if (finalMsg.stop_reason === 'max_tokens') {
+              controller.enqueue(encoder.encode('\n\n(Yanıt çok uzun oldu, lütfen tekrar deneyin.)'));
+              break;
+            }
+
+            if (finalMsg.stop_reason !== 'tool_use') {
+              // end_turn veya stop_sequence — döngüden çık
+              break;
+            }
+
+            const content = finalMsg.content as Anthropic.ContentBlock[];
+            const toolUseBlocks = content.filter(
+              (b: Anthropic.ContentBlock): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
+            );
+
+            const toolResults = await Promise.all(
+              toolUseBlocks.map(async (block: Anthropic.ToolUseBlock) => {
+                const input = Object.fromEntries(
+                  Object.entries(block.input as Record<string, unknown>)
+                    .filter(([, v]) => v !== null && v !== undefined)
+                    .map(([k, v]) => [k, String(v)])
+                );
+                const result = await executeTool(block.name, input);
+                return { type: 'tool_result' as const, tool_use_id: block.id, content: result };
+              })
+            );
+
+            anthropicMessages.push({ role: 'assistant', content });
+            anthropicMessages.push({ role: 'user', content: toolResults });
+            // Loop devam: bir sonraki stream başlayacak
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Sunucu hatası';
+          try {
+            controller.enqueue(encoder.encode(`\n\n(Hata: ${msg})`));
+          } catch { /* controller kapalı olabilir */ }
+          console.error('[chat stream] error:', err);
+        } finally {
+          try { controller.close(); } catch { /* already closed */ }
+        }
+      },
     });
 
-    // Tool use döngüsü
-    while (response.stop_reason === 'tool_use') {
-      const toolUseBlocks = response.content.filter(
-        (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
-      );
-
-      const toolResults = await Promise.all(
-        toolUseBlocks.map(async (block) => {
-          const input = Object.fromEntries(
-            Object.entries(block.input as Record<string, unknown>)
-              .filter(([, v]) => v !== null && v !== undefined)
-              .map(([k, v]) => [k, String(v)])
-          );
-          const result = await executeTool(block.name, input);
-          return { type: 'tool_result' as const, tool_use_id: block.id, content: result };
-        })
-      );
-
-      anthropicMessages.push({ role: 'assistant', content: response.content });
-      anthropicMessages.push({ role: 'user', content: toolResults });
-
-      response = await client.messages.create({
-        model: MODEL, // M1
-        max_tokens: 2048, // I4
-        system: cachedSystem,
-        tools: cachedTools,
-        messages: anthropicMessages,
-      });
-    }
-
-    // I4 — Handle max_tokens stop reason
-    if (response.stop_reason === 'max_tokens') {
-      return NextResponse.json({ message: 'Yanıt çok uzun oldu, lütfen tekrar deneyin.' });
-    }
-
-    const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === 'text');
-    return NextResponse.json({ message: textBlock?.text ?? '' });
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',
+      },
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Sunucu hatası';
     return NextResponse.json({ error: message }, { status: 500 });

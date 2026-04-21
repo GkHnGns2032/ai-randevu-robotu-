@@ -10,6 +10,8 @@ import { InsightsPanel } from '@/components/dashboard/InsightsPanel';
 import { VoiceSummary } from '@/components/dashboard/VoiceSummary';
 import { CustomerList } from '@/components/dashboard/CustomerList';
 import { StaffManager } from '@/components/dashboard/StaffManager';
+import { AppointmentHeatmap } from '@/components/dashboard/AppointmentHeatmap';
+import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { ThemeProvider } from '@/components/dashboard/ThemeProvider';
 import { PalettePicker } from '@/components/dashboard/PalettePicker';
 import { ScrollToTop } from '@/components/dashboard/ScrollToTop';
@@ -58,8 +60,16 @@ async function DashboardContent() {
         <StatsOverview appointments={appointments} />
       </div>
 
+      <Section title="Gelir Trendi" delay={150}>
+        <RevenueChart appointments={appointments} />
+      </Section>
+
       <Section title="Akıllı Analiz" delay={200}>
         <InsightsPanel />
+      </Section>
+
+      <Section title="Randevu Yoğunluğu" delay={250}>
+        <AppointmentHeatmap appointments={appointments} />
       </Section>
 
       <Section title="Haftalık Takvim" delay={300}>
