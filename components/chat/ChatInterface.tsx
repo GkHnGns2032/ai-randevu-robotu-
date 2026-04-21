@@ -20,25 +20,30 @@ export function ChatInterface() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastMsgRef = useRef<HTMLDivElement>(null);
 
+  const lastMessageId = messages[messages.length - 1]?.id;
+  const lastMessageRole = messages[messages.length - 1]?.role;
+
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
-    const last = messages[messages.length - 1];
-    if (last?.role === 'assistant' && lastMsgRef.current) {
-      // Bot mesajı: mesajın başını göster
+    if (lastMessageRole === 'assistant' && lastMsgRef.current) {
+      // Bot mesajı: mesajın başını göster (sadece ilk eklendiğinde, stream sırasında tekrarlama yok)
       const top = lastMsgRef.current.offsetTop - 12;
       container.scrollTo({ top, behavior: 'smooth' });
     } else {
       // Kullanıcı mesajı veya loading: en alta git
       container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     }
-  }, [messages]);
+  }, [lastMessageId, lastMessageRole, loading]);
 
   async function handleSend(text: string) {
     const userMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: text, timestamp: new Date() };
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
     setLoading(true);
+
+    const assistantId = crypto.randomUUID();
+    let started = false;
 
     try {
       const res = await fetch('/api/chat', {
@@ -51,20 +56,48 @@ export function ChatInterface() {
         }),
       });
 
-      if (!res.ok) {
+      if (!res.ok || !res.body) {
         throw new Error(`API error: ${res.status}`);
       }
-      const data = await res.json() as { message: string };
-      const reply = data.message ?? 'Bir hata oluştu. Lütfen tekrar deneyin.';
-      setMessages((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), role: 'assistant', content: reply, timestamp: new Date() },
-      ]);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        if (!chunk) continue;
+
+        if (!started) {
+          started = true;
+          setLoading(false);
+          setMessages((prev) => [
+            ...prev,
+            { id: assistantId, role: 'assistant', content: chunk, timestamp: new Date() },
+          ]);
+        } else {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === assistantId ? { ...m, content: m.content + chunk } : m))
+          );
+        }
+      }
+
+      if (!started) {
+        // Stream boş geldi — yedek mesaj
+        setMessages((prev) => [
+          ...prev,
+          { id: assistantId, role: 'assistant', content: 'Bir hata oluştu. Lütfen tekrar deneyin.', timestamp: new Date() },
+        ]);
+      }
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), role: 'assistant', content: 'Bir hata oluştu. Lütfen tekrar deneyin.', timestamp: new Date() },
-      ]);
+      if (!started) {
+        setMessages((prev) => [
+          ...prev,
+          { id: assistantId, role: 'assistant', content: 'Bir hata oluştu. Lütfen tekrar deneyin.', timestamp: new Date() },
+        ]);
+      }
     } finally {
       setLoading(false);
     }
