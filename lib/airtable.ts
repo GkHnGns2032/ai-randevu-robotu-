@@ -1,6 +1,7 @@
 // lib/airtable.ts
 import Airtable from 'airtable';
 import { Appointment, ServiceType, AppointmentStatus, PaymentStatus, PaymentMethod } from './types';
+import { logger } from './logger';
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY! })
   .base(process.env.AIRTABLE_BASE_ID!);
@@ -131,8 +132,21 @@ export async function getAppointmentById(id: string): Promise<Appointment | null
   try {
     const record = await table.find(id);
     return recordToAppointment(record);
-  } catch {
-    return null;
+  } catch (error) {
+    // Airtable 404 → null (beklenen "kayıt yok" durumu)
+    const statusCode = (error as { statusCode?: number })?.statusCode;
+    const errorType = (error as { error?: string })?.error;
+    if (statusCode === 404 || errorType === 'NOT_FOUND') {
+      return null;
+    }
+    // Network, auth (401), server error (500) → log + throw
+    logger.error('airtable_lookup_failed', {
+      table: 'Randevular',
+      id,
+      statusCode,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
   }
 }
 
