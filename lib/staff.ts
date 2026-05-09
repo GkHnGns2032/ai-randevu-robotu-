@@ -1,4 +1,5 @@
 import Airtable from 'airtable';
+import { logger } from './logger';
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY! })
   .base(process.env.AIRTABLE_BASE_ID!);
@@ -67,7 +68,18 @@ export async function getStaffById(id: string): Promise<Staff | null> {
   try {
     const record = await staffTable.find(id);
     return toStaff(record);
-  } catch {
-    return null;
+  } catch (error) {
+    const statusCode = (error as { statusCode?: number })?.statusCode;
+    const errorType = (error as { error?: string })?.error;
+    if (statusCode === 404 || errorType === 'NOT_FOUND') {
+      return null;
+    }
+    logger.error('airtable_lookup_failed', {
+      table: 'Staff',
+      id,
+      statusCode,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
   }
 }

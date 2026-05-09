@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { listAppointments } from '@/lib/airtable';
 import { CLIENT_CONFIG } from '@/config/client';
+import { logger } from '@/lib/logger';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
@@ -120,6 +121,10 @@ ${statsStr}`,
       },
     });
   } catch (err) {
+    logger.error('insights_failed', {
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
     const message = err instanceof Error ? err.message : 'Hata';
     return NextResponse.json({ error: message }, { status: 500 });
   }

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { Brain, TrendingUp, Clock, Star, RefreshCw, Sparkles } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 function cacheStatus(iso: string): { label: string; color: string; dot: string } {
   const diffMin = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
@@ -97,8 +98,11 @@ export function InsightsPanel() {
       const res = await fetch('/api/insights');
       const json = await res.json() as Insights;
       setData(json);
-    } catch {
-      // ignore
+    } catch (err) {
+      logger.error('insights_panel_fetch_failed', {
+        component: 'InsightsPanel',
+        error: err instanceof Error ? err.message : String(err),
+      });
     } finally {
       setLoading(false);
       setSpinning(false);

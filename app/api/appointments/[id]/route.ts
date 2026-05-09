@@ -7,6 +7,7 @@ import {
 } from '@/lib/airtable';
 import { isSlotStillAvailable } from '@/lib/booking-lock';
 import { createCalendarEvent, deleteCalendarEvent } from '@/lib/calendar';
+import { safeCalendarOp } from '@/lib/safeCalendarOp';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { userId } = await auth();
@@ -48,8 +49,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
 
       try {
-        if (current.googleCalendarEventId) {
-          try { await deleteCalendarEvent(current.googleCalendarEventId); } catch { /* ignore */ }
+        const oldEventId = current.googleCalendarEventId;
+        if (oldEventId) {
+          await safeCalendarOp(
+            () => deleteCalendarEvent(oldEventId),
+            { op: 'delete_for_patch_reschedule', appointmentId: id, oldEventId },
+          );
         }
         const newEventId = await createCalendarEvent({
           summary: `${current.service} - ${current.customerName}`,
