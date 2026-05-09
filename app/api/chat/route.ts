@@ -9,6 +9,7 @@ import { getNotesForCustomer } from '@/lib/customer-notes';
 import { sendSMS, buildConfirmationMessage } from '@/lib/sms';
 import { isSlotStillAvailable } from '@/lib/booking-lock';
 import { rateLimit } from '@/lib/rate-limit';
+import { safeCalendarOp } from '@/lib/safeCalendarOp';
 import { SERVICE_DURATIONS, ServiceType } from '@/lib/types';
 
 // I3 — Env var guard at module level
@@ -175,7 +176,10 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
     try {
       await cancelAppointment(toolInput.appointment_id);
       if (toolInput.google_calendar_event_id) {
-        try { await deleteCalendarEvent(toolInput.google_calendar_event_id); } catch { /* ignore */ }
+        await safeCalendarOp(
+          () => deleteCalendarEvent(toolInput.google_calendar_event_id),
+          { op: 'delete_for_cancel', appointmentId: toolInput.appointment_id, eventId: toolInput.google_calendar_event_id },
+        );
       }
       return JSON.stringify({ success: true, message: 'Randevu iptal edildi.' });
     } catch (err) {
@@ -212,11 +216,14 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
     const current = await getAppointmentById(toolInput.appointment_id).catch(() => null);
 
     let newEventId: string | undefined;
-    try {
-      if (toolInput.old_google_calendar_event_id) {
-        try { await deleteCalendarEvent(toolInput.old_google_calendar_event_id); } catch { /* ignore */ }
-      }
-      newEventId = await createCalendarEvent({
+    if (toolInput.old_google_calendar_event_id) {
+      await safeCalendarOp(
+        () => deleteCalendarEvent(toolInput.old_google_calendar_event_id),
+        { op: 'delete_for_reschedule', appointmentId: toolInput.appointment_id, oldEventId: toolInput.old_google_calendar_event_id },
+      );
+    }
+    const createResult = await safeCalendarOp(
+      () => createCalendarEvent({
         summary: current ? `${service} - ${current.customerName}` : `${service} - Randevu`,
         description: current
           ? `Müşteri: ${current.customerName}\nTelefon: ${current.customerPhone}\n(Yeniden zamanlandı)`
@@ -225,8 +232,12 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
         time: toolInput.new_time,
         durationMinutes: duration,
         attendeePhone: current?.customerPhone ?? '',
-      });
-    } catch { /* calendar hatası kritik değil */ }
+      }),
+      { op: 'create_for_reschedule', appointmentId: toolInput.appointment_id, date: toolInput.new_date, time: toolInput.new_time },
+    );
+    if (createResult.ok) {
+      newEventId = createResult.data;
+    }
 
     try {
       const updated = rescheduleStaffId
