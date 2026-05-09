@@ -53,6 +53,10 @@ export async function GET() {
     // En yoğun saatler
     const hourCounts: Record<string, number> = {};
     for (const a of past) {
+      if (!a.time) {
+        logger.warn('insights_field_missing', { field: 'time', appointmentId: a.id });
+        continue;
+      }
       const hour = a.time.split(':')[0] + ':00';
       hourCounts[hour] = (hourCounts[hour] ?? 0) + 1;
     }
