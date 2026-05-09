@@ -32,7 +32,7 @@ export async function GET(req: Request) {
   const toRemind = appointments.filter((a) => {
     if (a.date !== today) return false;
     if (a.status !== 'confirmed') return false;
-    if ((a as unknown as Record<string, unknown>).reminderSent) return false;
+    if (a.reminderSent) return false;
     const apptMs = istanbulApptMs(a.date, a.time);
     return Math.abs(apptMs - targetMs) <= windowMs;
   });

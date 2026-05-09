@@ -34,6 +34,7 @@ function recordToAppointment(record: Airtable.Record<Airtable.FieldSet>): Appoin
     googleCalendarEventId: (f.googleCalendarEventId as string) || undefined,
     staffId: Array.isArray(staffIdArr) ? staffIdArr[0] : undefined,
     staffName: Array.isArray(staffNameArr) ? staffNameArr[0] : undefined,
+    reminderSent: f.reminderSent as boolean | undefined,
   };
 }
 
