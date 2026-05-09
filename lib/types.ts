@@ -25,6 +25,7 @@ export interface Appointment {
   googleCalendarEventId?: string;
   staffId?: string;       // Airtable record id (Staff tablosuna link)
   staffName?: string;     // Airtable Lookup field'dan denormalize — UI/AI için
+  reminderSent?: boolean;
 }
 
 export interface ChatMessage {
