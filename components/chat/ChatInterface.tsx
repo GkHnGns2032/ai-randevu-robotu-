@@ -4,6 +4,7 @@ import { ChatMessage } from '@/lib/types';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import { CLIENT_CONFIG } from '@/config/client';
+import { logger } from '@/lib/logger';
 
 const { assistantName, businessName, welcomeEmoji } = CLIENT_CONFIG;
 
@@ -91,7 +92,11 @@ export function ChatInterface() {
           { id: assistantId, role: 'assistant', content: 'Bir hata oluştu. Lütfen tekrar deneyin.', timestamp: new Date() },
         ]);
       }
-    } catch {
+    } catch (err) {
+      logger.error('chat_send_failed', {
+        component: 'ChatInterface',
+        error: err instanceof Error ? err.message : String(err),
+      });
       if (!started) {
         setMessages((prev) => [
           ...prev,
