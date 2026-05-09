@@ -9,6 +9,7 @@ import {
 } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 interface Props { appointments: Appointment[]; }
 interface StaffOption { id: string; name: string; active: boolean; }
@@ -107,7 +108,12 @@ export function AppointmentCalendar({ appointments }: Props) {
     fetch('/api/staff')
       .then((r) => r.ok ? r.json() : [])
       .then((data: StaffOption[]) => setStaffOptions(Array.isArray(data) ? data.filter((s) => s.active !== false) : []))
-      .catch(() => {});
+      .catch((err) => {
+        logger.warn('staff_fetch_failed', {
+          component: 'AppointmentCalendar',
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
   }, []);
 
   useEffect(() => () => {

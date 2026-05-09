@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { CLIENT_CONFIG } from '@/config/client';
 import { X } from 'lucide-react';
 import type { Appointment, ServiceType, PaymentStatus, PaymentMethod } from '@/lib/types';
+import { logger } from '@/lib/logger';
 
 interface StaffOption { id: string; name: string; services: string[]; active: boolean; }
 
@@ -34,7 +35,12 @@ export function AppointmentForm({ appointment, onClose, onSaved }: Props) {
     fetch('/api/staff')
       .then((r) => r.ok ? r.json() : [])
       .then((data: StaffOption[]) => setAllStaff(Array.isArray(data) ? data : []))
-      .catch(() => {});
+      .catch((err) => {
+        logger.warn('staff_fetch_failed', {
+          component: 'AppointmentForm',
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
   }, []);
 
   const availableStaff = allStaff.filter(
