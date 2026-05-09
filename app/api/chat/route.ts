@@ -10,6 +10,7 @@ import { sendSMS, buildConfirmationMessage } from '@/lib/sms';
 import { isSlotStillAvailable } from '@/lib/booking-lock';
 import { rateLimit } from '@/lib/rate-limit';
 import { safeCalendarOp } from '@/lib/safeCalendarOp';
+import { logger } from '@/lib/logger';
 import { SERVICE_DURATIONS, ServiceType } from '@/lib/types';
 
 // I3 — Env var guard at module level
@@ -213,7 +214,13 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
       console.error('[reschedule_appointment] Slot doğrulama hatası (devam ediliyor):', lockErr);
     }
 
-    const current = await getAppointmentById(toolInput.appointment_id).catch(() => null);
+    const current = await getAppointmentById(toolInput.appointment_id).catch((err) => {
+      logger.error('chat_appointment_lookup_failed', {
+        appointmentId: toolInput.appointment_id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return null;
+    });
 
     let newEventId: string | undefined;
     if (toolInput.old_google_calendar_event_id) {
