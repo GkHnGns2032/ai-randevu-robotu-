@@ -4,6 +4,7 @@ import { auth } from '@clerk/nextjs/server';
 import { listAppointments, createAppointment } from '@/lib/airtable';
 import { AppointmentStatus, SERVICE_DURATIONS } from '@/lib/types';
 import { createCalendarEvent } from '@/lib/calendar';
+import { safeCalendarOp } from '@/lib/safeCalendarOp';
 
 export async function GET(req: NextRequest) {
   const { userId } = await auth();
@@ -42,14 +43,16 @@ export async function POST(req: Request) {
 
     const duration = SERVICE_DURATIONS[body.service as keyof typeof SERVICE_DURATIONS] ?? 60;
     let eventId: string | undefined;
-    try {
-      eventId = await createCalendarEvent({
+    const result = await safeCalendarOp(
+      () => createCalendarEvent({
         summary: `${body.service} - ${body.customerName}`,  // staffName yok, sadece hizmet+isim
         description: `Müşteri: ${body.customerName}\nTel: ${body.customerPhone}\n${body.notes ?? ''}`,
         date: body.date, time: body.time, durationMinutes: duration,
         attendeePhone: body.customerPhone,
-      });
-    } catch { /* calendar hatası kritik değil */ }
+      }),
+      { op: 'create_via_dashboard', customerPhone: body.customerPhone, date: body.date, time: body.time },
+    );
+    if (result.ok) eventId = result.data;
 
     const appointment = await createAppointment({
       customerName: body.customerName,
