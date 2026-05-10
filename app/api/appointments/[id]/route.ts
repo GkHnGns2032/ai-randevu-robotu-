@@ -64,7 +64,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           durationMinutes: current.durationMinutes,
           attendeePhone: current.customerPhone,
         });
-        extraFields.googleCalendarEventId = newEventId;
+        if (newEventId) extraFields.googleCalendarEventId = newEventId;
       } catch (calErr) {
         console.error('[appointments PATCH] GCal sync failed:', calErr);
       }

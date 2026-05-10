@@ -4,6 +4,7 @@ import { addMinutes, parseISO } from 'date-fns';
 import { TimeSlot, WORKING_HOURS } from './types';
 import { CLIENT_CONFIG } from '@/config/client';
 import { getAppointmentsByDate } from './airtable';
+import { logger } from './logger';
 
 function formatIstanbulTime(date: Date): string {
   return new Intl.DateTimeFormat('en-GB', {
@@ -23,6 +24,14 @@ function getCalendarClient() {
     refresh_token: process.env.GOOGLE_REFRESH_TOKEN!,
   });
   return google.calendar({ version: 'v3', auth });
+}
+
+// Refresh token expire/revoke veya geçersiz credential durumlarını tespit eder.
+// googleapis bu hataları Error.message içinde fırlatır; pattern'lar OAuth2 standard.
+function isCalendarAuthError(err: unknown): boolean {
+  if (!err) return false;
+  const message = err instanceof Error ? err.message : String(err);
+  return /invalid_grant|Token has been expired or revoked|Invalid Credentials/i.test(message);
 }
 
 function toMinutes(time: string): number {
@@ -85,16 +94,21 @@ export async function getAvailableSlots(
   const dayStart = new Date(`${date}T${startHour}:00:00+03:00`);
   const dayEnd = new Date(`${date}T${endHour}:00:00+03:00`);
 
-  const { data } = await calendar.freebusy.query({
-    requestBody: {
-      timeMin: dayStart.toISOString(),
-      timeMax: dayEnd.toISOString(),
-      items: [{ id: calendarId }],
-      timeZone: 'Europe/Istanbul',
-    },
-  });
-
-  const busyPeriods = data.calendars?.[calendarId]?.busy ?? [];
+  let busyPeriods: Array<{ start?: string | null; end?: string | null }> = [];
+  try {
+    const { data } = await calendar.freebusy.query({
+      requestBody: {
+        timeMin: dayStart.toISOString(),
+        timeMax: dayEnd.toISOString(),
+        items: [{ id: calendarId }],
+        timeZone: 'Europe/Istanbul',
+      },
+    });
+    busyPeriods = data.calendars?.[calendarId]?.busy ?? [];
+  } catch (err) {
+    if (!isCalendarAuthError(err)) throw err;
+    logger.error('calendar_auth_revoked', { op: 'getAvailableSlots', date });
+  }
 
   const slots: TimeSlot[] = [];
   let cursor = dayStart;
@@ -152,28 +166,38 @@ export async function createCalendarEvent(params: {
   time: string;
   durationMinutes: number;
   attendeePhone: string;
-}): Promise<string> {
+}): Promise<string | null> {
   const calendar = getCalendarClient();
   const calendarId = process.env.GOOGLE_CALENDAR_ID!;
 
   const startDateTime = new Date(`${params.date}T${params.time}:00+03:00`);
   const endDateTime = addMinutes(startDateTime, params.durationMinutes);
 
-  const { data } = await calendar.events.insert({
-    calendarId,
-    requestBody: {
-      summary: params.summary,
-      description: params.description,
-      start: { dateTime: startDateTime.toISOString(), timeZone: 'Europe/Istanbul' },
-      end: { dateTime: endDateTime.toISOString(), timeZone: 'Europe/Istanbul' },
-    },
-  });
-
-  return data.id!;
+  try {
+    const { data } = await calendar.events.insert({
+      calendarId,
+      requestBody: {
+        summary: params.summary,
+        description: params.description,
+        start: { dateTime: startDateTime.toISOString(), timeZone: 'Europe/Istanbul' },
+        end: { dateTime: endDateTime.toISOString(), timeZone: 'Europe/Istanbul' },
+      },
+    });
+    return data.id!;
+  } catch (err) {
+    if (!isCalendarAuthError(err)) throw err;
+    logger.error('calendar_auth_revoked', { op: 'createCalendarEvent', date: params.date, time: params.time });
+    return null;
+  }
 }
 
 export async function deleteCalendarEvent(eventId: string): Promise<void> {
   const calendar = getCalendarClient();
   const calendarId = process.env.GOOGLE_CALENDAR_ID!;
-  await calendar.events.delete({ calendarId, eventId });
+  try {
+    await calendar.events.delete({ calendarId, eventId });
+  } catch (err) {
+    if (!isCalendarAuthError(err)) throw err;
+    logger.error('calendar_auth_revoked', { op: 'deleteCalendarEvent', eventId });
+  }
 }

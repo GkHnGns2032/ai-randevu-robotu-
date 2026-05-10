@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       }),
       { op: 'create_via_dashboard', customerPhone: body.customerPhone, date: body.date, time: body.time },
     );
-    if (result.ok) eventId = result.data;
+    if (result.ok && result.data) eventId = result.data;
 
     const appointment = await createAppointment({
       customerName: body.customerName,

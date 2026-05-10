@@ -109,7 +109,7 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
         time: toolInput.time,
         durationMinutes: duration,
         attendeePhone: toolInput.customer_phone,
-      });
+      }) ?? undefined;
     } catch (calErr) {
       console.error('[book_appointment] Google Calendar error (devam ediliyor):', calErr);
     }
@@ -242,7 +242,7 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
       }),
       { op: 'create_for_reschedule', appointmentId: toolInput.appointment_id, date: toolInput.new_date, time: toolInput.new_time },
     );
-    if (createResult.ok) {
+    if (createResult.ok && createResult.data) {
       newEventId = createResult.data;
     }
 
