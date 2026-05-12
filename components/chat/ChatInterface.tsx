@@ -6,12 +6,12 @@ import { ChatInput } from './ChatInput';
 import { CLIENT_CONFIG } from '@/config/client';
 import { logger } from '@/lib/logger';
 
-const { assistantName, businessName, welcomeEmoji } = CLIENT_CONFIG;
+const { assistantName, businessName } = CLIENT_CONFIG;
 
 const INITIAL_MESSAGE: ChatMessage = {
   id: 'initial',
   role: 'assistant',
-  content: `Merhaba! Ben ${assistantName}, ${businessName}'nun randevu asistanıyım. ${welcomeEmoji}\n\nSize nasıl yardımcı olabilirim? Hangi hizmetimizden yararlanmak istersiniz?`,
+  content: `Merhaba, ben ${assistantName} — ${businessName} randevu asistanıyım. Size nasıl yardımcı olabilirim?`,
   timestamp: new Date(),
 };
 
