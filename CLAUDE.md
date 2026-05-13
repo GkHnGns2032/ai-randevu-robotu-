@@ -201,7 +201,7 @@ Hatalar + pattern'ler vault'taki `D:/GAI/vault/operasyon/hata-logu.md` dosyasın
 - **YYYY-MM-DD** — konu — sebep — çözüm
 ```
 
-Vault git'e bağlı **değil** — hata logu commit edilmez, dosya append.
+**Commit politikası (2026-05-14 sonrası):** Vault artık git'te (`gunesai-vault` GitHub private repo). Hata-logu **append-only** kuralı korunur — eski kayıtlar silinmez, sadece eklenir. Haftalık retro turunda biriken HL kayıtları `docs(hata-logu): hafta NN HL kayıtları` formatında toplu commit'lenir. Vault git akışı detayı: `D:/GAI/vault/operasyon/kurallar/vault-bakim-rituelleri.md` §4.
 
 ## 11. CLAUDE.md Güncelleme Tetikleyicileri
 
