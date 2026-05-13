@@ -35,7 +35,9 @@ yarn-error.log*
 .vercel
 
 # local tooling state
-.claude/
+.claude/*
+!.claude/skills/
+!.claude/skills/**
 /.remember/
 # typescript
 *.tsbuildinfo
