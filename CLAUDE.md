@@ -1,11 +1,12 @@
 # CLAUDE.md — Bella Repo Rehberi
 
 > Bu dosya Claude Code'un her oturumda otomatik yüklediği proje rehberidir.
-> Stratejik anayasa için: **`D:/GunesAI/CLAUDE.md`** (vault — vizyon, ürün katalog, delegation, KVKK).
+> Stratejik anayasa için: **`D:/GAI/vault/CLAUDE.md`** (vault — vizyon, ürün katalog, delegation, KVKK).
+> Workspace anayasa için: **`D:/GAI/CLAUDE.md`** (repo haritası, çalışma kuralları özeti).
 > Teknik kurulum (stack, env tablosu, deploy) için: **[README.md](README.md)**.
 > Bu dosya ikisini tekrarlamaz; Claude'un proje üzerinde çalışırken hızla bağlama girmesi için gereken özetleri verir.
 >
-> Son güncelleme: 2026-05-09
+> Son güncelleme: 2026-05-14 (workspace migration — vault path D:/GAI/vault/'a güncellendi)
 
 ---
 
@@ -195,7 +196,7 @@ Detay: vault'taki `operasyon/kurallar/delegation-detay.md`.
 
 ## 10. Hata Logu Pratiği
 
-Hatalar + pattern'ler vault'taki `D:/GunesAI/operasyon/hata-logu.md` dosyasına eklenir (HL-N görev koduyla). Format:
+Hatalar + pattern'ler vault'taki `D:/GAI/vault/operasyon/hata-logu.md` dosyasına eklenir (HL-N görev koduyla). Format:
 ```
 - **YYYY-MM-DD** — konu — sebep — çözüm
 ```
@@ -225,8 +226,10 @@ Bu dosya yaşayan dokümandır. Şu durumlarda Claude güncelleme önerir (**sor
 - **[docs/SISTEM-REHBERI.md](docs/SISTEM-REHBERI.md)** — sistem rehberi
 - **[docs/MUSTERI-MULAKAT-SORULARI.md](docs/MUSTERI-MULAKAT-SORULARI.md)** — yeni müşteri keşif soruları
 - **[docs/superpowers/plans/](docs/superpowers/plans/)** — Faz planları + handoff'lar (özellikle Faz 5.5 ve roadmap)
-- **`D:/GunesAI/CLAUDE.md`** — vault stratejik anayasa (vizyon, ürün katalog, çalışma felsefesi)
-- **`D:/GunesAI/operasyon/kurallar/`** — detay kural modülleri (git-akisi, delegation-detay, hata-politikasi, KVKK, dil-politikasi, isimlendirme)
+- **`D:/GAI/vault/CLAUDE.md`** — vault stratejik anayasa (vizyon, ürün katalog, çalışma felsefesi)
+- **`D:/GAI/vault/operasyon/kurallar/`** — detay kural modülleri (git-akisi, delegation-detay, hata-politikasi, KVKK, dil-politikasi, isimlendirme)
+- **`D:/GAI/CLAUDE.md`** — workspace anayasa (repo haritası, bağlam önceliği)
+- **`D:/GAI/MEMORY.md`** + `D:/GAI/memory/` — workspace operasyonel memory
 
 ---
 
