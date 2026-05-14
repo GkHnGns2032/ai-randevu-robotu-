@@ -1,6 +1,6 @@
 ---
 name: bella-handoff-yazimi
-description: Use when Gökhan closes a Bella round or session — phrases like "tur bitti", "kapatalım", "günü kapatıyorum", "handoff yaz", "şu turun handoff'u", "sonraki tura geçmeden özetle", "bugün burada bırakalım". Triggers at the end of any Bella work session that produced commits or decisions worth carrying forward. Produces three artifacts: (1) memory/project_aktif_oturum_handoff.md overwrite for next-session pickup, (2) vault/operasyon/retro/gunluk.md append for daily log, (3) optional HL entries flagged for vault-hl-kayit. Always use this skill — never let Gökhan close without a written handoff (claude.ai cannot write handoffs per vault rule §9.1).
+description: Use when Gökhan closes a Bella round or session — phrases like "tur bitti", "kapatalım", "günü kapatıyorum", "kapatalım günü", "handoff yaz", "şu turun handoff'u", "sonraki tura geçmeden özetle", "bugün burada bırakalım". Triggers at the end of any Bella work session that produced commits or decisions worth carrying forward. Produces four artifacts: (1) memory/project_aktif_oturum_handoff.md overwrite for next-session pickup, (2) vault/operasyon/retro/gunluk.md append for daily detailed log, (3) vault/operasyon/retro/gun-sonu.md 3-day rolling buffer (read-modify-write, başlık + 1 cümle özet), (4) optional HL entries flagged for vault-hl-kayit. Always use this skill — never let Gökhan close without a written handoff (claude.ai cannot write handoffs per vault rule §9.1).
 ---
 
 # Bella Tur Kapanış Handoff'u
@@ -133,6 +133,55 @@ Hata yoksa: "**HL kayıt yok** — bu turda anlamlı/kritik hata gözlemlenmedi.
 - Anlamlı → kayıt **zorunlu** (yanlış mantık, yanlış dosya)
 - Kritik → kayıt + kritik liste güncelleme önerisi
 
+## Çıktı 4/4 — Gün Sonu Özet (vault, rolling buffer)
+
+**Dosya:** `D:/GAI/vault/operasyon/retro/gun-sonu.md`
+
+**Eylem:** **Read-modify-write** (3 günlük rolling buffer). Yeni gün eklenir, dosyada zaten 3 gün varsa **en eski blok silinir**.
+
+**Amaç:** "Son 3 günde ne yapıldı" hızlı bakış. `gunluk.md` (append-only, kalıcı arşiv) ile karışmaz; gun-sonu.md kısa özet — başlık + 1 cümle açıklama.
+
+**Şablon (her gün bloğu):**
+
+```markdown
+## [YYYY-MM-DD] (Bugün)
+
+- **[Başlık 1]:** [Tek cümle açıklama — somut, geçmiş zamanlı]
+- **[Başlık 2]:** [Tek cümle açıklama]
+- **[Başlık 3]:** [Tek cümle açıklama]
+- [3-6 madde toplam — turun ana iş kalemleri]
+```
+
+**Örnek bir günün doldurulmuş hali:**
+
+```markdown
+## 2026-05-14 (Bugün)
+
+- **Workspace migration:** 4 dağınık kök D:/GAI/'ye federe edildi, vault private GitHub'a alındı.
+- **9 skill yazımı (BD-INFRA-B2):** 5 Bella + 4 vault skill yazıldı, atomik commit'lendi, main'e merge.
+- **Skill discovery fix:** Workspace seviyesi .claude/skills/ kuruldu (3 katman discovery), Mac geçiş script'i eklendi.
+```
+
+**Rolling logic — uygulama adımları:**
+
+1. **Mevcut dosyayı oku:** `D:/GAI/vault/operasyon/retro/gun-sonu.md`
+2. **Mevcut gün bloklarını say:** `## YYYY-MM-DD` regex ile (header bölüm dışında — frontmatter/açıklama atla)
+3. **Bugünün başlıklarını üret:** Turun ana iş kalemlerinden 3-6 madde, her biri `**Başlık:** cümle` formatında
+4. **Karar:**
+   - 0 gün varsa → yeni günü ekle (template placeholder'ı sil)
+   - 1-2 gün varsa → yeni günü en üste ekle (en altta tutulan eski günler kalır)
+   - 3 gün varsa → en alttaki bloğu sil + yeni günü en üste ekle (rolling)
+5. **Dosyayı yaz:** Tüm dosya overwrite (write mode). Header + 3 son gün bloğu (yeni → eski sırayla).
+
+**Önemli kurallar:**
+
+- **Tarih sistem context'inden** (`Today's date`), tahmin yasak
+- **Başlık üretimi:** Turun ana iş kalemlerinden seç — her başlık 2-4 kelime, somut isim ("Skill yazımı", "Master merge", "Bug fix BD3-B4")
+- **Cümle:** Geçmiş zamanlı (yapıldı/edildi/eklendi), kanıt-bazlı (commit hash veya dosya referansı opsiyonel)
+- **Madde sayısı:** 3-6 arası. Çok az olursa eksik, çok olursa "özet" amacı kaybolur
+- **Müşteri verisi yasak** (KVKK), `.env` değer yasak (secret leak)
+- **Manuel düzenleme yasak** — bu skill harici elle dokunulmaz, drift olur
+
 ## Davranış Kuralları
 
 ### Git state'i komut çalıştır, varsayma
@@ -172,10 +221,11 @@ git status
 1. Git state komutları çalıştır → kanıt topla
 2. Çıktı 1 (memory aktif handoff) overwrite — şablonu doldur, MEMORY.md index satırını güncelle
 3. Çıktı 2 (vault günlük log) append
-4. Çıktı 3 (HL aday listesi) — anlamlı+ hata varsa
-5. Cross-check: son `git log --oneline -3` + `git status` ile yazılanı doğrula
-6. Gökhan'a sun: "3 dosya güncellendi: [path'ler]. HL kayıt adayı [var/yok]."
-7. Vault dosyaları **commit edilmez** burada — `vault-hl-kayit` ve haftalık retro commit'leri bu işi yapar
+4. Çıktı 3 (vault gün-sonu özet) read-modify-write — 3 günlük rolling buffer, başlık + 1 cümle açıklama, eski 3+ ise en alttaki silinir
+5. Çıktı 4 (HL aday listesi) — anlamlı+ hata varsa
+6. Cross-check: son `git log --oneline -3` + `git status` ile yazılanı doğrula
+7. Gökhan'a sun: "4 dosya güncellendi: [path'ler]. HL kayıt adayı [var/yok]."
+8. Vault dosyaları **commit edilmez** burada — `vault-hl-kayit` ve haftalık retro commit'leri bu işi yapar
 
 ## Yaygın Hata Pattern'leri
 
@@ -186,6 +236,8 @@ git status
 | "Pending push yok" demek ama branch local'de kaldıysa | Sonraki oturum eksik state'le açılır | `git branch -vv` çalıştır, ahead/behind kontrol |
 | Handoff'u sadece memory'ye yazıp gunluk.md'yi atlamak | Haftalık retro'da iz kalmaz | Her iki dosya zorunlu |
 | Aktif handoff entry'sini append etmek (overwrite yerine) | Entry büyür, sonraki oturum konfüze olur | Overwrite — geçici entry |
+| gun-sonu.md'yi append'lemek (rolling buffer yerine) | Dosya şişer, "son 3 gün" özetlik amacını kaybeder | Read-modify-write: yeni gün en üste + 3+ ise en alt sil |
+| gun-sonu.md'ye uzun paragraf yazmak | Detay arşivi `gunluk.md`'de — gun-sonu kısa olmalı | Başlık + 1 cümle, 3-6 madde max |
 
 ## İlgili Skill'ler
 
