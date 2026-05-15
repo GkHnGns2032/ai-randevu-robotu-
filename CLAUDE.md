@@ -6,7 +6,7 @@
 > Teknik kurulum (stack, env tablosu, deploy) için: **[README.md](README.md)**.
 > Bu dosya ikisini tekrarlamaz; Claude'un proje üzerinde çalışırken hızla bağlama girmesi için gereken özetleri verir.
 >
-> Son güncelleme: 2026-05-15 (BD3 kapanış — Chat localStorage Faz 6 regression fix prod canlı, §6 faz tablosu güncel)
+> Son güncelleme: 2026-05-16 (BD-INFRA-SDK kapanış — Anthropic SDK ^0.96.0 prod canlı, §2 stack + §6 faz tablosu + §7 deferred güncel)
 
 ---
 
@@ -27,7 +27,7 @@ Kullanıcı (Gökhan) handoff metni vermeden iş başlatma. Eski handoff dosyala
 | Katman | Teknoloji |
 |---|---|
 | Framework | Next.js 15 (App Router) + React 19 + TS 5 |
-| AI | Anthropic SDK `^0.33.1` — model `claude-sonnet-4-6` |
+| AI | Anthropic SDK `^0.96.0` — model `claude-sonnet-4-6` |
 | Veri | Airtable (`Randevular`, `Staff`, `CustomerNotes`) |
 | Auth | Clerk (`/dashboard(.*)` korumalı) |
 | Takvim | Google Calendar (OAuth refresh token) |
@@ -132,6 +132,7 @@ GCal create hatası, SMS gönderim hatası — yakalanır, loglanır, randevu Ai
 | BD2 | Tamam (.gitignore broaden) | `v1.1-bd1-temizlik` | main |
 | Faz 7 | **Dormant** (strateji pivotu sonrası askıda) | — | `faz-7` (boş, plan dosyası untracked) |
 | BD3 | Tamam (tek aday A1: Chat localStorage Faz 6 regression fix, prod canlı 2026-05-15) | `v1.7.1-bd3-baseline` (öncesi) → `v1.8-bd3-chat-localstorage` (sonrası) | `bd3-chat-localstorage` (merge sonrası silindi) |
+| BD-INFRA-SDK | Tamam (Anthropic SDK `^0.33.1` → `^0.96.0` prod canlı 2026-05-16, 17 ay açık kapandı) | `v1.8.1-bd-infra-sdk-baseline` (öncesi) → `v1.9-bd-infra-sdk-v096` (sonrası) | `bd-infra-sdk-upgrade` (merge sonrası lokal+remote duruyor, toplu cleanup turunda silinir) |
 | BD4+ | Deferred — bkz §7 |
 
 **Branch akışı kuralı:** Feature/fix → ayrı branch → atomik commit'ler → onay → main merge → tag → push. Branch'ler `--merged main` olunca toplu cleanup (`git branch -d <isim>` + `git push origin --delete <isim>`).
@@ -148,13 +149,12 @@ Bu branch'leri silmek için **kullanıcı izni olmadan dokunma** — özellikle 
 
 Bunlar şu an sıra dışı — pilot 1 sözleşmesi öncesi runtime stability + multi-tenant prep + BD-UI redesign turları öncelikli (vault `wiki/urunler/bella-entegrasyon-stratejisi.md` §C pilot v1 önkoşulları). Sırayla:
 
-1. **`@anthropic-ai/sdk` 0.33 → 1.x upgrade** — current 0.33.1 (`package.json`), latest 1.x. API breaking change'ler var (özellikle messages.stream).
-2. **Build-time data collection fix** — Insights endpoint build sırasında Airtable çağırıyor mu kontrol et (statik generation hatası riski).
-3. **Rate limit Upstash geçişi** — multi-instance koruma için ([lib/rate-limit.ts](lib/rate-limit.ts) replace).
-4. **Booking-lock atomic** — Redis SETNX veya benzeri. Bella ölçeğinde gerekli olmayabilir, müşteri yoğunluğu artarsa öncelik kazanır.
-5. **Multi-tenant** — `config/client.ts` runtime config'e dönüşüm, Airtable base/env per-tenant resolution.
-6. **Calendar bypass kaldırma** — multi-calendar (Staff.calendarId) refactor'ü gerekli, bkz §5.1 ve [docs/superpowers/plans/2026-04-20-faz5.5-handoff.md](docs/superpowers/plans/2026-04-20-faz5.5-handoff.md).
-7. **Faz 7 landing entegrasyonu** — strateji pivotu sonrası askıda, kullanıcı kararına bağlı.
+1. **Build-time data collection fix** — Insights endpoint build sırasında Airtable çağırıyor mu kontrol et (statik generation hatası riski).
+2. **Rate limit Upstash geçişi** — multi-instance koruma için ([lib/rate-limit.ts](lib/rate-limit.ts) replace).
+3. **Booking-lock atomic** — Redis SETNX veya benzeri. Bella ölçeğinde gerekli olmayabilir, müşteri yoğunluğu artarsa öncelik kazanır.
+4. **Multi-tenant** — `config/client.ts` runtime config'e dönüşüm, Airtable base/env per-tenant resolution.
+5. **Calendar bypass kaldırma** — multi-calendar (Staff.calendarId) refactor'ü gerekli, bkz §5.1 ve [docs/superpowers/plans/2026-04-20-faz5.5-handoff.md](docs/superpowers/plans/2026-04-20-faz5.5-handoff.md).
+6. **Faz 7 landing entegrasyonu** — strateji pivotu sonrası askıda, kullanıcı kararına bağlı.
 
 ## 8. Çalışma Kuralları
 
