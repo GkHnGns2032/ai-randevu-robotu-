@@ -10,7 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.33.1",
+    "@anthropic-ai/sdk": "^0.96.0",
     "@base-ui/react": "^1.4.0",
     "@clerk/nextjs": "^6.18.1",
     "airtable": "^0.12.2",
