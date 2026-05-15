@@ -25,6 +25,25 @@ export function ChatInterface() {
   const lastMessageRole = messages[messages.length - 1]?.role;
 
   useEffect(() => {
+    const saved = localStorage.getItem('bella-chat-history');
+    if (!saved) return;
+    try {
+      const parsed = JSON.parse(saved) as ChatMessage[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        setMessages(parsed.map((m) => ({ ...m, timestamp: new Date(m.timestamp) })));
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (messages.length <= 1) return;
+    const t = setTimeout(() => {
+      localStorage.setItem('bella-chat-history', JSON.stringify(messages));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [messages]);
+
+  useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
     if (lastMessageRole === 'assistant' && lastMsgRef.current) {
@@ -113,7 +132,10 @@ export function ChatInterface() {
       {messages.length > 1 && (
         <div className="flex justify-end px-4 pt-2">
           <button
-            onClick={() => setMessages([INITIAL_MESSAGE])}
+            onClick={() => {
+              setMessages([INITIAL_MESSAGE]);
+              localStorage.removeItem('bella-chat-history');
+            }}
             className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
           >
             Yeni Sohbet
