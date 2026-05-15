@@ -6,7 +6,7 @@
 > Teknik kurulum (stack, env tablosu, deploy) için: **[README.md](README.md)**.
 > Bu dosya ikisini tekrarlamaz; Claude'un proje üzerinde çalışırken hızla bağlama girmesi için gereken özetleri verir.
 >
-> Son güncelleme: 2026-05-14 (workspace migration — vault path D:/GAI/vault/'a güncellendi)
+> Son güncelleme: 2026-05-15 (BD3 kapanış — Chat localStorage Faz 6 regression fix prod canlı, §6 faz tablosu güncel)
 
 ---
 
@@ -131,7 +131,7 @@ GCal create hatası, SMS gönderim hatası — yakalanır, loglanır, randevu Ai
 | BD1 | Tamam (3 chore commit) | `v1.0-bd1-baseline` (öncesi) → `v1.1-bd1-temizlik` (sonrası) | `bd1-temizlik` (origin'de) |
 | BD2 | Tamam (.gitignore broaden) | `v1.1-bd1-temizlik` | main |
 | Faz 7 | **Dormant** (strateji pivotu sonrası askıda) | — | `faz-7` (boş, plan dosyası untracked) |
-| BD3 | **Hazırlık** — Bella runtime bug'larına öncelik (Gökhan'ın canlı testlerinden gelecek) | — | TBD |
+| BD3 | Tamam (tek aday A1: Chat localStorage Faz 6 regression fix, prod canlı 2026-05-15) | `v1.7.1-bd3-baseline` (öncesi) → `v1.8-bd3-chat-localstorage` (sonrası) | `bd3-chat-localstorage` (merge sonrası silindi) |
 | BD4+ | Deferred — bkz §7 |
 
 **Branch akışı kuralı:** Feature/fix → ayrı branch → atomik commit'ler → onay → main merge → tag → push. Branch'ler `--merged main` olunca toplu cleanup (`git branch -d <isim>` + `git push origin --delete <isim>`).
@@ -142,11 +142,11 @@ GCal create hatası, SMS gönderim hatası — yakalanır, loglanır, randevu Ai
 - `faz-7` — boş, dormant
 - `bd1-temizlik` — BD1 commit'leri, main'e merge sonrası ayrı cleanup turu için tutulmuş
 
-Bu branch'leri silmek BD3 sırasında **yapma** — kullanıcı izni olmadan dokunma.
+Bu branch'leri silmek için **kullanıcı izni olmadan dokunma** — özellikle origin'de duran feature/faz branch'leri tarihsel kayıt olarak tutuluyor. Toplu cleanup turu açılırsa `--merged main` koşulu ile batch silinir (bkz BD3-A1 turunda `bd3-chat-localstorage` örneği: merge sonrası KRİTİK ayrı onayla local + remote tek komutta silindi).
 
 ## 7. Deferred Technical Debt (BD4+ kuyruğu)
 
-Bunlar şu an sıra dışı — Bella runtime stability'si öncelikli (BD3). Sırayla:
+Bunlar şu an sıra dışı — pilot 1 sözleşmesi öncesi runtime stability + multi-tenant prep + BD-UI redesign turları öncelikli (vault `wiki/urunler/bella-entegrasyon-stratejisi.md` §C pilot v1 önkoşulları). Sırayla:
 
 1. **`@anthropic-ai/sdk` 0.33 → 1.x upgrade** — current 0.33.1 (`package.json`), latest 1.x. API breaking change'ler var (özellikle messages.stream).
 2. **Build-time data collection fix** — Insights endpoint build sırasında Airtable çağırıyor mu kontrol et (statik generation hatası riski).
