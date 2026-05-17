@@ -6,7 +6,7 @@
 > Teknik kurulum (stack, env tablosu, deploy) için: **[README.md](README.md)**.
 > Bu dosya ikisini tekrarlamaz; Claude'un proje üzerinde çalışırken hızla bağlama girmesi için gereken özetleri verir.
 >
-> Son güncelleme: 2026-05-16 (BD-INFRA-SDK kapanış — Anthropic SDK ^0.96.0 prod canlı, §2 stack + §6 faz tablosu + §7 deferred güncel)
+> Son güncelleme: 2026-05-17 (BD-INFRA-MT-LOADER kapanış — multi-tenant Yol A loader Aşama 0-1 canlı, §4 config yapı + §5.2 yeni karar bloku + §6 faz tablosu + §7 #4 deferred güncel)
 
 ---
 
@@ -78,9 +78,10 @@ git reset --hard v1.0-starter        # Faz 1 MVP state
 - [ai-tools.ts](lib/ai-tools.ts) — Anthropic tool şemaları + SYSTEM_PROMPT
 - [types.ts](lib/types.ts) — `Appointment`, `ServiceType`, `WORKING_HOURS`
 
-**Yapılandırma** ([config/client.ts](config/client.ts)):
-- İşletme adı, asistan adı, hizmet listesi (isim/süre/fiyat), çalışma saatleri
-- **Yeni müşteriye uyarlamak için sadece bu dosya + `.env.local` değiştirilir** (single-tenant tasarım, multi-tenant deferred — bkz §7)
+**Yapılandırma** ([config/](config/)):
+- [config/clients/](config/clients/) — her tenant'ın işletme adı, asistan adı, hizmet listesi (isim/süre/fiyat), çalışma saatleri ayrı dosyada (`<slug>.ts`)
+- [config/client.ts](config/client.ts) — wrapper, `NEXT_PUBLIC_CLIENT_ID` env'e göre tenant seçer, default `bella`
+- **Yeni müşteri için:** `config/clients/<slug>.ts` kopyala (Bella'yı baz al) + wrapper map'e ekle + `NEXT_PUBLIC_CLIENT_ID=<slug>` Vercel build env set et (Yol A — bkz §5.2)
 
 **Middleware** ([middleware.ts](middleware.ts)):
 - Clerk `/dashboard(.*)` matcher
@@ -97,9 +98,20 @@ git reset --hard v1.0-starter        # Faz 1 MVP state
 
 **Kaldırılırsa risk:** Multi-staff slot ayrımı bozulur. Kaldırma kararı multi-calendar refactor'üne bağlı (Staff başına ayrı `calendarId` field). Ayrıntı: [docs/superpowers/plans/2026-04-20-faz5.5-handoff.md:29](docs/superpowers/plans/2026-04-20-faz5.5-handoff.md#L29).
 
-### 5.2 Single-Tenant Kabul
+### 5.2 Multi-Tenant — Yol A Loader (Aşama 0-1)
 
-[config/client.ts](config/client.ts) tek müşteri için yapılandırılmıştır. Multi-tenant (her müşteriye ayrı işletme yapılandırması) Faz 7+ deferred. Şu an her müşteri = ayrı Vercel deploy + ayrı Airtable base + ayrı `.env.local`.
+**Karar (BD-INFRA-MT-LOADER, 2026-05-17):** [config/client.ts](config/client.ts) artık **wrapper** — `NEXT_PUBLIC_CLIENT_ID` env'e göre [config/clients/<slug>.ts](config/clients/) modülünden re-export eder. Her tenant kendi dosyasında, 12 import noktası (`@/config/client`) dokunulmadan kalır.
+
+**Yol A felsefesi:** Tek tenant = tek deploy. Her müşteri = ayrı Vercel projesi (build-time `NEXT_PUBLIC_CLIENT_ID=<slug>` set edilir) + ayrı Airtable base + ayrı `.env.local`. Runtime'da tenant seçimi yok.
+
+**Yapı:**
+- `config/clients/bella.ts` — Bella Güzellik Salonu tenant config
+- `config/client.ts` — wrapper (clients map + env switch + warning fallback)
+- Default fallback: `bella` (env yokken)
+
+**Aşama 2 (Yol C runtime migration) eşiği:** 8-10 müşteri. O zaman tek deploy + runtime tenant seçimi (subdomain veya path-based routing) gelir. Strateji dokümanı: vault `wiki/teknik/bd-infra-multitenant.md` (Aşama 2) + `bd-infra-multitenant-yol-a-onboarding.md` (Aşama 0-1).
+
+**Önceki tasarım:** Tek `config/client.ts` direkt export — `v1.9.2-mt-loader-baseline` tag'inden önce. Rollback için bu tag'e dönülebilir.
 
 ### 5.3 Booking-Lock Atomik Değil
 
@@ -133,6 +145,7 @@ GCal create hatası, SMS gönderim hatası — yakalanır, loglanır, randevu Ai
 | Faz 7 | **Dormant** (strateji pivotu sonrası askıda) | — | `faz-7` (boş, plan dosyası untracked) |
 | BD3 | Tamam (tek aday A1: Chat localStorage Faz 6 regression fix, prod canlı 2026-05-15) | `v1.7.1-bd3-baseline` (öncesi) → `v1.8-bd3-chat-localstorage` (sonrası) | `bd3-chat-localstorage` (merge sonrası silindi) |
 | BD-INFRA-SDK | Tamam (Anthropic SDK `^0.33.1` → `^0.96.0` prod canlı 2026-05-16, 17 ay açık kapandı) | `v1.8.1-bd-infra-sdk-baseline` (öncesi) → `v1.9-bd-infra-sdk-v096` (sonrası) | `bd-infra-sdk-upgrade` (merge sonrası lokal+remote duruyor, toplu cleanup turunda silinir) |
+| BD-INFRA-MT-LOADER | Tamam (multi-tenant Yol A iskelet loader prod 2026-05-17, single-tenant tasarım Aşama 0-1 Yol A'ya geçti) | `v1.9.2-mt-loader-baseline` (öncesi) → `v1.10-bd-infra-mt-loader` (sonrası) | `bd-infra-mt-loader` (merge sonrası toplu cleanup turunda silinir) |
 | BD4+ | Deferred — bkz §7 |
 
 **Branch akışı kuralı:** Feature/fix → ayrı branch → atomik commit'ler → onay → main merge → tag → push. Branch'ler `--merged main` olunca toplu cleanup (`git branch -d <isim>` + `git push origin --delete <isim>`).
@@ -152,7 +165,7 @@ Bunlar şu an sıra dışı — pilot 1 sözleşmesi öncesi runtime stability +
 1. **Build-time data collection fix** — Insights endpoint build sırasında Airtable çağırıyor mu kontrol et (statik generation hatası riski).
 2. **Rate limit Upstash geçişi** — multi-instance koruma için ([lib/rate-limit.ts](lib/rate-limit.ts) replace).
 3. **Booking-lock atomic** — Redis SETNX veya benzeri. Bella ölçeğinde gerekli olmayabilir, müşteri yoğunluğu artarsa öncelik kazanır.
-4. **Multi-tenant** — `config/client.ts` runtime config'e dönüşüm, Airtable base/env per-tenant resolution.
+4. **Multi-tenant Aşama 2 (Yol C migration)** — `config/client.ts` wrapper'dan runtime config-route'a dönüşüm, Airtable base/env per-tenant resolution. Aşama 0-1 (Yol A loader) BD-INFRA-MT-LOADER turunda canlandı (`v1.10-bd-infra-mt-loader`, 2026-05-17). Migration eşiği: 8-10 müşteri.
 5. **Calendar bypass kaldırma** — multi-calendar (Staff.calendarId) refactor'ü gerekli, bkz §5.1 ve [docs/superpowers/plans/2026-04-20-faz5.5-handoff.md](docs/superpowers/plans/2026-04-20-faz5.5-handoff.md).
 6. **Faz 7 landing entegrasyonu** — strateji pivotu sonrası askıda, kullanıcı kararına bağlı.
 
