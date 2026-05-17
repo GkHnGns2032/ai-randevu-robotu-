@@ -1,35 +1,31 @@
 // config/client.ts
 // ─────────────────────────────────────────────────────────────
-// Yeni müşteri için sadece bu dosyayı ve .env.local'i düzenle.
+// Multi-tenant Yol A loader (Aşama 0-1: tek tenant tek deploy).
+// NEXT_PUBLIC_CLIENT_ID env'e göre config/clients/<slug>.ts modülü seçer.
+// Yeni tenant: config/clients/<slug>.ts oluştur + aşağıdaki clients map'e ekle.
+// Aşama 2 (Yol C runtime multi-tenant migration) eşiği: 8-10 müşteri.
 // ─────────────────────────────────────────────────────────────
 
-export const CLIENT_CONFIG = {
-  // İşletme bilgileri
-  businessName: 'Bella Güzellik Salonu',
-  assistantName: 'Bella',
-  welcomeEmoji: '💇‍♀️',
+import * as bella from './clients/bella';
 
-  // Hizmetler — isim, süre (dk), fiyat (₺)
-  services: [
-    { name: 'Saç Kesimi',    duration: 45,  price: 350  },
-    { name: 'Saç Boyama',    duration: 120, price: 950  },
-    { name: 'Manikür',       duration: 60,  price: 280  },
-    { name: 'Pedikür',       duration: 60,  price: 320  },
-    { name: 'Kaş Tasarımı',  duration: 30,  price: 220  },
-    { name: 'Cilt Bakımı',   duration: 90,  price: 650  },
-    { name: 'Masaj',         duration: 60,  price: 500  },
-    { name: 'Kalıcı Makyaj', duration: 120, price: 1600 },
-  ] as const,
+const clients = {
+  bella,
+} as const;
 
-  // Çalışma saatleri
-  workingHours: {
-    start: 9,           // 09:00
-    end: 19,            // 19:00
-    slotMinutes: 30,    // 30 dk'lık slotlar
-    workingDays: [1, 2, 3, 4, 5, 6] as number[], // 0=Pazar, 1=Pzt … 6=Cmt
-    workingDaysLabel: 'Pazartesi-Cumartesi',
-  },
-};
+type ClientId = keyof typeof clients;
 
-// ServiceType: config'den otomatik türetilir, elle değiştirme
-export type ServiceName = (typeof CLIENT_CONFIG.services)[number]['name'];
+const envClientId = process.env.NEXT_PUBLIC_CLIENT_ID;
+const clientId: ClientId =
+  envClientId && envClientId in clients ? (envClientId as ClientId) : 'bella';
+
+if (envClientId && !(envClientId in clients)) {
+  console.warn(
+    `[config/client] NEXT_PUBLIC_CLIENT_ID="${envClientId}" tanımlı değil. Düşülen tenant: "bella". Available: ${Object.keys(clients).join(', ')}`,
+  );
+}
+
+export const CLIENT_CONFIG = clients[clientId].CLIENT_CONFIG;
+
+// ServiceName: Aşama 0-1'de tek tenant olduğu için bella literal'inden türer.
+// Aşama 2 (Yol C migration) sırasında tüm tenant'ların service union'ına dönüştürülür.
+export type ServiceName = (typeof clients)['bella']['CLIENT_CONFIG']['services'][number]['name'];
