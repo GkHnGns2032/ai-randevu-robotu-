@@ -359,7 +359,6 @@ Geçmiş tarihe (${todayISO} öncesi) randevu oluşturma — müşteriye bugün 
       async start(controller) {
         try {
           // Tool use döngüsü — her iterasyon streaming
-          // eslint-disable-next-line no-constant-condition
           while (true) {
             const stream = client.messages.stream({
               model: MODEL,
