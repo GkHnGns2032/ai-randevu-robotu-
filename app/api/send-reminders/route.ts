@@ -1,6 +1,6 @@
 // app/api/send-reminders/route.ts
-// Vercel Cron ile her 30 dakikada çalışır
-// Randevudan 2 saat önce SMS hatırlatması gönderir
+// Vercel Cron her 30 dakikada `Authorization: Bearer $CRON_SECRET` header ile çağırır (vercel.json crons).
+// Randevudan 2 saat önce SMS hatırlatması gönderir.
 import { NextResponse } from 'next/server';
 import { listAppointments, markReminderSent } from '@/lib/airtable';
 import { sendSMS, buildReminderMessage } from '@/lib/sms';
@@ -19,8 +19,8 @@ function istanbulApptMs(date: string, time: string): number {
 }
 
 export async function GET(req: Request) {
-  const secret = new URL(req.url).searchParams.get('secret');
-  if (secret !== process.env.CRON_SECRET) {
+  const authHeader = req.headers.get('authorization');
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

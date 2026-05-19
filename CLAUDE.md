@@ -6,7 +6,7 @@
 > Teknik kurulum (stack, env tablosu, deploy) için: **[README.md](README.md)**.
 > Bu dosya ikisini tekrarlamaz; Claude'un proje üzerinde çalışırken hızla bağlama girmesi için gereken özetleri verir.
 >
-> Son güncelleme: 2026-05-17 (BD-INFRA-MT-LOADER kapanış — multi-tenant Yol A loader Aşama 0-1 canlı, §4 config yapı + §5.2 yeni karar bloku + §6 faz tablosu + §7 #4 deferred güncel)
+> Son güncelleme: 2026-05-19 (BD-INFRA-3 CRON_SECRET kapanış — Vercel cron auth `Authorization: Bearer $CRON_SECRET` header pattern'e geçti, `vercel.json` crons array eklendi, §4 send-reminders satırı + §6 faz tablosu güncel)
 
 ---
 
@@ -61,7 +61,7 @@ git reset --hard v1.0-starter        # Faz 1 MVP state
 - [appointments/route.ts](app/api/appointments/route.ts) — Dashboard CRUD (GET/POST), Clerk auth
 - [appointments/[id]/route.ts](app/api/appointments/[id]/route.ts) — Dashboard PATCH (drag-drop) + DELETE
 - [appointments/[id]/no-show/route.ts](app/api/appointments/[id]/no-show/route.ts) — No-show işaretleme
-- [send-reminders/route.ts](app/api/send-reminders/route.ts) — Cron: 2 saat öncesi SMS (CRON_SECRET ile korumalı)
+- [send-reminders/route.ts](app/api/send-reminders/route.ts) — Cron: 2 saat öncesi SMS, Vercel cron `Authorization: Bearer $CRON_SECRET` header ile auth (vercel.json crons her 30 dk)
 - [insights/route.ts](app/api/insights/route.ts) — InsightsPanel için Anthropic özetleme
 - [staff/route.ts](app/api/staff/route.ts) — Personel CRUD
 - [customer/[phone]/notes/route.ts](app/api/customer/[phone]/notes/route.ts) — Müşteri notları
@@ -146,6 +146,7 @@ GCal create hatası, SMS gönderim hatası — yakalanır, loglanır, randevu Ai
 | BD3 | Tamam (tek aday A1: Chat localStorage Faz 6 regression fix, prod canlı 2026-05-15) | `v1.7.1-bd3-baseline` (öncesi) → `v1.8-bd3-chat-localstorage` (sonrası) | `bd3-chat-localstorage` (merge sonrası silindi) |
 | BD-INFRA-SDK | Tamam (Anthropic SDK `^0.33.1` → `^0.96.0` prod canlı 2026-05-16, 17 ay açık kapandı) | `v1.8.1-bd-infra-sdk-baseline` (öncesi) → `v1.9-bd-infra-sdk-v096` (sonrası) | `bd-infra-sdk-upgrade` (merge sonrası lokal+remote duruyor, toplu cleanup turunda silinir) |
 | BD-INFRA-MT-LOADER | Tamam (multi-tenant Yol A iskelet loader prod 2026-05-17, single-tenant tasarım Aşama 0-1 Yol A'ya geçti) | `v1.9.2-mt-loader-baseline` (öncesi) → `v1.10-bd-infra-mt-loader` (sonrası) | `bd-infra-mt-loader` (merge sonrası toplu cleanup turunda silinir) |
+| BD-INFRA-3-CRON-SECRET | Tamam (Vercel cron auth pattern `?secret=` query → `Authorization: Bearer` header geçişi + `vercel.json` crons array, prod canlı 2026-05-19; BD-INFRA-3 toplu askıları tümüyle kapandı) | `v1.11.1-cron-secret-baseline` (öncesi) → `v1.12-bd-infra-3-cron-secret` (sonrası) | main (feature branch'siz) |
 | BD4+ | Deferred — bkz §7 |
 
 **Branch akışı kuralı:** Feature/fix → ayrı branch → atomik commit'ler → onay → main merge → tag → push. Branch'ler `--merged main` olunca toplu cleanup (`git branch -d <isim>` + `git push origin --delete <isim>`).
