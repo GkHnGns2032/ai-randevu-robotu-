@@ -6,7 +6,7 @@
 > Teknik kurulum (stack, env tablosu, deploy) için: **[README.md](README.md)**.
 > Bu dosya ikisini tekrarlamaz; Claude'un proje üzerinde çalışırken hızla bağlama girmesi için gereken özetleri verir.
 >
-> Son güncelleme: 2026-05-19 (BD-INFRA-3 CRON_SECRET kapanış — Vercel cron auth `Authorization: Bearer $CRON_SECRET` header pattern'e geçti, `vercel.json` crons array eklendi, §4 send-reminders satırı + §6 faz tablosu güncel)
+> Son güncelleme: 2026-05-19 (BD-INFRA-3 CRON_SECRET + BD-INFRA-CLAUDE-MD-S9-FIX ardışık kapanış — Vercel cron auth Bearer header'a geçti + §9 `.claude/skills/` exception drift düzeltmesi)
 
 ---
 
@@ -203,7 +203,7 @@ Detay: vault'taki `operasyon/kurallar/delegation-detay.md`.
 ## 9. Güvenlik & Yasaklar
 
 - **`.env.local` değerleri ASLA repo'ya, log'a, rapora yazılmaz.** Env değişken **isimleri** OK, değerleri yasak.
-- **`.claude/` directory komple gitignore** (BD2'de broaden edildi). Local-only state.
+- **`.claude/` directory gitignore** (BD2 broaden); **istisna:** `.claude/skills/` track edilir (skill katmanı versiyon kontrolünde, workspace ↔ repo sync için). Diğer `.claude/*` alt-yolları local-only state.
 - **Kullanıcı verisi (telefon, isim) log'a yazma** — KVKK riski. Mevcut error log'ları zaten generik mesaj kullanıyor.
 - **`/api/airtable-test` BD1'de silindi** — auth'suz Airtable canlı yazıyordu. Bu pattern tekrar ortaya çıkarsa **derhal flag**.
 - **Calendar bypass mantığını dokunma** — kasıtlı tasarım kararı (§5.1). Değişiklik için ayrı plan turu gerekli.
