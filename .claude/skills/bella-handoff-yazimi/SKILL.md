@@ -59,6 +59,19 @@ type: project
 
 Yoksa: "**Pending push — yok**. Tüm commit'ler GitHub'da senkron."
 
+## Git state (kanıt) — handoff yazımı sonrası
+
+**Zorunlu bölüm.** Adım 6 cross-check çıktısı bu bloğa **kopyala-yapıştır** olarak girer (göz karşılaştırması değil, dosyada kanıt). Format:
+
+- **Bella:** HEAD `<hash>` (<commit mesajı kısa>), `main...origin/main` <N/M sync>, working tree `<temiz/kirli + dosya listesi>`
+- **Bella tag listesi (son 5):** `<tag1>`, `<tag2>`, `<tag3>`, `<tag4>`, `<tag5>`
+- **Bella branch listesi (lokal):** `git branch -vv` çıktısı zorunlu kopyala-yapıştır
+- **Bella remote branch listesi:** `git branch -r` çıktısı zorunlu kopyala-yapıştır
+- **Vault:** HEAD `<hash>`, `main...origin/main` <N/M sync>, working tree `<temiz/kirli + dosya listesi>`
+- **Branch durumu:** `<merge edilmemiş feature branch'ler veya "yok">` — branch listesinden cross-check edildi
+
+Eğer working tree kirli ise dosya isimleri **mutlaka** listelenir (önceki kapanış 3 pattern'i: "temiz" yazıldı ama gunluk.md M idi → drift). Tutarsızlık varsa önce dosyaları temizle (commit + push veya stash), sonra handoff'u tamamla.
+
 ## Açık loop'lar (sınıflandırılmış)
 
 - 🟢 **Doğrulanmış:** [item — kaynak: commit/tag/dosya referansı]
@@ -205,13 +218,14 @@ Vault CLAUDE.md §9.1 + `delegation-detay.md`. Eğer kullanıcı "claude.ai'ye y
 ### Push protokol ihlali kontrolü
 Handoff yazılırken, son turdaki push'ları doğrula: her push öncesi açık onay alındı mı? Alınmadıysa pattern olarak HL aday listesine ekle (`feedback_push_protokol_ihlali.md` referansı).
 
-### Memory drift kontrolü — son cross-check
+### Memory drift kontrolü — son cross-check (dosyaya kanıt yapıştır)
 Handoff yazımı bittiğinde, son adım:
 ```bash
 git log --oneline -3
 git status
+git tag --sort=-creatordate | head -5
 ```
-Çıktıyı yazılan handoff'la **göz** karşılaştır. Tutarsızlık varsa düzelt, sonra dur.
+**Çıktıyı handoff metnindeki "Git state (kanıt)" bölümüne kopyala-yapıştır** — göz karşılaştırması değil, dosyada kanıt. Bypass'ı zorlaştırma kuralı (kapanış 3 + 2026-05-17 ardışık 2 tekrar pattern karşı önlemi): blok yazılmadan handoff kapanmaz. Tutarsızlık (örn. working tree kirli ama "temiz" yazılmış) varsa önce dosyaları temizle (commit + push veya stash), sonra handoff'u tamamla — drift'i handoff'a sızdırma.
 
 ### Tarih: sistem tarihinden
 `Today's date` context'ten al (system reminder'da var). Tarihi tahmin etme.
@@ -223,8 +237,8 @@ git status
 3. Çıktı 2 (vault günlük log) append
 4. Çıktı 3 (vault gün-sonu özet) read-modify-write — 3 günlük rolling buffer, başlık + 1 cümle açıklama, eski 3+ ise en alttaki silinir
 5. Çıktı 4 (HL aday listesi) — anlamlı+ hata varsa
-6. Cross-check: son `git log --oneline -3` + `git status` ile yazılanı doğrula
-7. Gökhan'a sun: "4 dosya güncellendi: [path'ler]. HL kayıt adayı [var/yok]."
+6. **Cross-check + kanıt yapıştır:** `git log --oneline -3` + `git status` + `git tag --sort=-creatordate | head -5` + `git branch -vv` + `git branch -r` çalıştır → çıktıyı Çıktı 1'deki **"Git state (kanıt)" bölümüne kopyala-yapıştır** (göz karşılaştırması yetmez, dosyada kanıt). Working tree kirli ise dosya isimleri bloka mutlaka girer; tutarsızlık varsa önce temizle, sonra handoff'u kapat. **Branch listesi zorunlu** (2026-05-19 memory drift 9. tekrar karşı önlemi, vault `delegation-detay.md` §Handoff Branch Listesi Cross-Check) — handoff "Sırada" maddesindeki branch isimleri bu çıktıdan kontrol edilir, bellekten/önceki handoff'tan kopyalanmaz.
+7. Gökhan'a sun: "4 dosya güncellendi: [path'ler]. HL kayıt adayı [var/yok]. Git state kanıt bloğu yapıştırıldı: [evet/hayır]."
 8. Vault dosyaları **commit edilmez** burada — `vault-hl-kayit` ve haftalık retro commit'leri bu işi yapar
 
 ## Yaygın Hata Pattern'leri
@@ -238,6 +252,8 @@ git status
 | Aktif handoff entry'sini append etmek (overwrite yerine) | Entry büyür, sonraki oturum konfüze olur | Overwrite — geçici entry |
 | gun-sonu.md'yi append'lemek (rolling buffer yerine) | Dosya şişer, "son 3 gün" özetlik amacını kaybeder | Read-modify-write: yeni gün en üste + 3+ ise en alt sil |
 | gun-sonu.md'ye uzun paragraf yazmak | Detay arşivi `gunluk.md`'de — gun-sonu kısa olmalı | Başlık + 1 cümle, 3-6 madde max |
+| Cross-check'i göz karşılaştırması olarak yapmak / handoff metnine kanıt yapıştırmamak | Atlanırsa kimse fark etmez; kapanış 3 + 2026-05-17 ardışık 2 tekrar pattern (handoff "temiz" yazdı, retro dosyaları M idi) | "Git state (kanıt)" bölümüne `git log/status/tag` çıktısı kopyala-yapıştır, working tree kirli ise dosya isimleri mutlaka listele |
+| Handoff "Sırada" maddesinde branch isimleri bellekten/önceki handoff'tan kopyalanmış | Memory drift 9. tekrar (BD-INFRA-CLEANUP-2 2026-05-19) — "3 branch silinecek" iddia ile git gerçeği uyumsuz (tek 1 lokal vardı, SDK/MT-LOADER hiç olmamış) | Adım 6'da `git branch -vv` + `git branch -r` çalıştır, kanıt bloğa yapıştır, "Sırada" branch isimleri bu çıktıdan kontrol et |
 
 ## İlgili Skill'ler
 
