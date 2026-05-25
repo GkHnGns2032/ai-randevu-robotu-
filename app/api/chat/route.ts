@@ -403,6 +403,16 @@ Geçmiş tarihe (${todayISO} öncesi) randevu oluşturma — müşteriye bugün 
                     .map(([k, v]) => [k, String(v)])
                 );
                 const result = await executeTool(block.name, input);
+
+                if (block.name === 'check_availability') {
+                  try {
+                    const parsed = JSON.parse(result) as { available?: boolean; slots?: string[] };
+                    if (parsed.available === true && Array.isArray(parsed.slots) && parsed.slots.length > 0) {
+                      controller.enqueue(encoder.encode(`\x00SLOTS:${parsed.slots.join(',')}\x00`));
+                    }
+                  } catch { /* malformed JSON — marker atla */ }
+                }
+
                 return { type: 'tool_result' as const, tool_use_id: block.id, content: result };
               })
             );

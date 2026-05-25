@@ -3,8 +3,57 @@ import { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '@/lib/types';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
+import { SlotPicker } from './SlotPicker';
 import { CLIENT_CONFIG } from '@/config/client';
 import { logger } from '@/lib/logger';
+
+function launchConfetti() {
+  const canvas = document.createElement('canvas');
+  canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9999';
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) { canvas.remove(); return; }
+  const colors = ['#EBE2F5', '#F7E2EC', '#C4AEE0', '#FFFFFF'];
+  const particles = Array.from({ length: 27 }, () => ({
+    x: Math.random() * canvas.width,
+    y: -10,
+    vx: (Math.random() - 0.5) * 2,
+    vy: 2 + Math.random() * 2,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    w: 8 + Math.random() * 8,
+    h: 4 + Math.random() * 4,
+    rot: Math.random() * Math.PI * 2,
+    rotSpeed: (Math.random() - 0.5) * 0.12,
+    sway: Math.random() * 0.04,
+    swayOffset: Math.random() * Math.PI * 2,
+  }));
+  const start = Date.now();
+  const duration = 2500;
+  let raf: number;
+  function draw() {
+    const elapsed = Date.now() - start;
+    if (elapsed > duration) { canvas.remove(); return; }
+    ctx!.clearRect(0, 0, canvas.width, canvas.height);
+    const alpha = Math.max(0, 1 - elapsed / duration);
+    particles.forEach((p) => {
+      p.x += p.vx + Math.sin(elapsed * p.sway + p.swayOffset) * 0.5;
+      p.y += p.vy;
+      p.rot += p.rotSpeed;
+      ctx!.save();
+      ctx!.translate(p.x, p.y);
+      ctx!.rotate(p.rot);
+      ctx!.globalAlpha = alpha;
+      ctx!.fillStyle = p.color;
+      ctx!.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx!.restore();
+    });
+    raf = requestAnimationFrame(draw);
+  }
+  raf = requestAnimationFrame(draw);
+  setTimeout(() => { cancelAnimationFrame(raf); canvas.remove(); }, duration + 100);
+}
 
 const { assistantName, businessName } = CLIENT_CONFIG;
 
@@ -15,14 +64,26 @@ const INITIAL_MESSAGE: ChatMessage = {
   timestamp: new Date(),
 };
 
+const QUICK_REPLIES = ['Randevu al', 'Hizmetler', 'Çalışma saatleri'];
+
 export function ChatInterface() {
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE]);
   const [loading, setLoading] = useState(false);
+  const [showFlash, setShowFlash] = useState(false);
+  const [welcomeIn, setWelcomeIn] = useState(false);
+  const [pendingSlots, setPendingSlots] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastMsgRef = useRef<HTMLDivElement>(null);
+  const confettiMsgRef = useRef<string | null>(null);
+  const newMsgIdsRef = useRef<Set<string>>(new Set());
 
   const lastMessageId = messages[messages.length - 1]?.id;
   const lastMessageRole = messages[messages.length - 1]?.role;
+
+  useEffect(() => {
+    const t = setTimeout(() => setWelcomeIn(true), 250);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem('bella-chat-history');
@@ -44,6 +105,19 @@ export function ChatInterface() {
   }, [messages]);
 
   useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== 'assistant' || !last.id) return;
+    if (last.id === confettiMsgRef.current) return;
+    const c = last.content.toLowerCase();
+    if (c.includes('oluşturuldu') || c.includes('randevunuz hazır')) {
+      confettiMsgRef.current = last.id;
+      setShowFlash(true);
+      setTimeout(() => setShowFlash(false), 400);
+      launchConfetti();
+    }
+  }, [messages]);
+
+  useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
     if (lastMessageRole === 'assistant' && lastMsgRef.current) {
@@ -57,12 +131,15 @@ export function ChatInterface() {
   }, [lastMessageId, lastMessageRole, loading]);
 
   async function handleSend(text: string) {
+    setPendingSlots([]);
     const userMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: text, timestamp: new Date() };
+    newMsgIdsRef.current.add(userMessage.id!);
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
     setLoading(true);
 
     const assistantId = crypto.randomUUID();
+    newMsgIdsRef.current.add(assistantId);
     let started = false;
 
     try {
@@ -86,7 +163,14 @@ export function ChatInterface() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
+        let chunk = decoder.decode(value, { stream: true });
+        if (!chunk) continue;
+
+        const markerMatch = chunk.match(/\x00SLOTS:([^\x00]+)\x00/);
+        if (markerMatch) {
+          setPendingSlots(markerMatch[1].split(','));
+          chunk = chunk.replace(/\x00SLOTS:[^\x00]+\x00/g, '');
+        }
         if (!chunk) continue;
 
         if (!started) {
@@ -126,16 +210,33 @@ export function ChatInterface() {
     }
   }
 
+  const showQuickReplies = messages.length === 1 && !loading;
+
   return (
-    <div className="flex flex-col flex-1 min-h-0 bg-gray-50">
+    <div className="flex flex-col flex-1 min-h-0 relative" style={{ background: '#FDFCF9' }}>
+      {showFlash && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'white', zIndex: 10, animation: 'flash-white 400ms ease-out both' }}
+        />
+      )}
       {messages.length > 1 && (
         <div className="flex justify-end px-4 pt-2">
           <button
             onClick={() => {
               setMessages([INITIAL_MESSAGE]);
+              setPendingSlots([]);
               localStorage.removeItem('bella-chat-history');
             }}
-            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            className="transition-colors hover:opacity-80"
+            style={{
+              fontFamily: '"DM Sans", sans-serif',
+              fontSize: '11px',
+              fontWeight: 300,
+              letterSpacing: '0.3px',
+              textTransform: 'uppercase',
+              color: '#8B7B95',
+            }}
           >
             Yeni Sohbet
           </button>
@@ -144,23 +245,96 @@ export function ChatInterface() {
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-6">
         {messages.map((m, i) => {
           const isLast = i === messages.length - 1;
+          const isInitial = m.id === 'initial';
           return (
-            <div key={m.id ?? i} ref={isLast ? lastMsgRef : null}>
-              <MessageBubble message={m} />
+            <div
+              key={m.id ?? i}
+              ref={isLast ? lastMsgRef : null}
+              style={isInitial ? {
+                opacity: welcomeIn ? 1 : 0,
+                transform: welcomeIn ? 'translateY(0) scale(1)' : 'translateY(28px) scale(0.92)',
+                transition: 'opacity 600ms cubic-bezier(0.34,1.56,0.64,1), transform 600ms cubic-bezier(0.34,1.56,0.64,1)',
+              } : undefined}
+            >
+              <MessageBubble
+                message={m}
+                isNew={!isInitial && newMsgIdsRef.current.has(m.id ?? '')}
+              />
             </div>
           );
         })}
+
+        {showQuickReplies && (
+          <div className="flex flex-wrap gap-2 mb-4 ml-[56px]">
+            {QUICK_REPLIES.map((chip) => (
+              <button
+                key={chip}
+                onClick={() => handleSend(chip)}
+                disabled={loading}
+                className="quick-reply-chip disabled:opacity-50"
+                style={{
+                  fontFamily: '"DM Sans", sans-serif',
+                  fontSize: '12px',
+                  fontWeight: 400,
+                  color: '#6B5080',
+                  borderRadius: '20px',
+                  padding: '7px 14px',
+                }}
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {pendingSlots.length > 0 && lastMessageRole === 'assistant' && !loading && (
+          <div className="ml-[56px] mt-[-8px] mb-5">
+            <SlotPicker
+              slots={pendingSlots}
+              onSelect={(time) => {
+                setPendingSlots([]);
+                handleSend(time);
+              }}
+            />
+          </div>
+        )}
+
         {loading && (
-          <div className="flex gap-3 mb-4">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-rose-400 to-pink-600 flex items-center justify-center text-white text-sm font-bold">
-              B
+          <div className="flex gap-3 mb-5">
+            <div
+              className="w-11 h-11 rounded-full flex items-center justify-center text-lg shrink-0"
+              style={{
+                background: 'linear-gradient(145deg, #F0E8F5, #F7E2EC)',
+                border: '1px solid #EDD8E8',
+              }}
+            >
+              🌸
             </div>
-            <div className="bg-white shadow-sm border border-gray-100 rounded-2xl rounded-bl-sm px-4 py-3">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 bg-rose-400 rounded-full animate-bounce [animation-delay:0ms]" />
-                <span className="w-2 h-2 bg-rose-400 rounded-full animate-bounce [animation-delay:150ms]" />
-                <span className="w-2 h-2 bg-rose-400 rounded-full animate-bounce [animation-delay:300ms]" />
-              </div>
+            <div
+              style={{
+                padding: '13px 17px',
+                background: '#FFFFFF',
+                border: '0.5px solid #EDE4DA',
+                borderRadius: '20px 20px 20px 4px',
+                display: 'flex',
+                gap: '5px',
+                alignItems: 'center',
+              }}
+            >
+              {[0, 200, 400].map((delay) => (
+                <span
+                  key={delay}
+                  style={{
+                    width: '5px',
+                    height: '5px',
+                    background: '#C8B8D0',
+                    borderRadius: '50%',
+                    display: 'inline-block',
+                    animation: 'pulse-dot 1.4s ease-in-out infinite',
+                    animationDelay: `${delay}ms`,
+                  }}
+                />
+              ))}
             </div>
           </div>
         )}
