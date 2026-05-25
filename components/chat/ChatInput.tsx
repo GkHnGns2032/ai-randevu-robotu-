@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, KeyboardEvent } from 'react';
 import { Send, Mic, MicOff } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface Props {
@@ -41,6 +40,7 @@ type MicState = 'idle' | 'listening' | 'unsupported';
 export function ChatInput({ onSend, disabled }: Props) {
   const [value, setValue] = useState('');
   const [micState, setMicState] = useState<MicState>('idle');
+  const [rippleActive, setRippleActive] = useState(false);
   const recognitionRef = useRef<SpeechRec | null>(null);
 
   useEffect(() => {
@@ -82,6 +82,8 @@ export function ChatInput({ onSend, disabled }: Props) {
     if (micState === 'listening') recognitionRef.current?.stop();
     onSend(trimmed);
     setValue('');
+    setRippleActive(true);
+    setTimeout(() => setRippleActive(false), 400);
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
@@ -92,7 +94,7 @@ export function ChatInput({ onSend, disabled }: Props) {
   }
 
   return (
-    <div className="flex gap-2 p-4 bg-white border-t border-gray-100">
+    <div className="flex gap-2 p-4" style={{ background: '#F5EEE8' }}>
       {micState !== 'unsupported' && (
         <button
           onClick={toggleMic}
@@ -100,12 +102,11 @@ export function ChatInput({ onSend, disabled }: Props) {
           aria-label={micState === 'listening' ? 'Mikrofonu durdur' : 'Sesli yaz'}
           className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200"
           style={{
-            background: micState === 'listening'
-              ? 'linear-gradient(135deg, #f43f5e, #e11d48)'
-              : '#f3f4f6',
-            color: micState === 'listening' ? '#fff' : '#9ca3af',
+            background: micState === 'listening' ? '#7B5EA7' : '#FAF8FE',
+            color: micState === 'listening' ? '#FFFFFF' : '#6B5080',
+            border: '1px solid #D8CEEA',
             animation: micState === 'listening' ? 'pulse 1.5s ease-in-out infinite' : 'none',
-            boxShadow: micState === 'listening' ? '0 0 0 4px rgba(244,63,94,0.2)' : 'none',
+            boxShadow: micState === 'listening' ? '0 0 0 4px rgba(123,94,167,0.18)' : 'none',
           }}
         >
           {micState === 'listening' ? <MicOff size={16} /> : <Mic size={16} />}
@@ -118,18 +119,41 @@ export function ChatInput({ onSend, disabled }: Props) {
         onKeyDown={handleKeyDown}
         placeholder={micState === 'listening' ? 'Dinliyorum...' : 'Mesajınızı yazın...'}
         disabled={disabled}
-        className="flex-1 rounded-full border-gray-200 focus-visible:ring-rose-400"
+        className="flex-1 rounded-[24px] border-[#EDE4DA] bg-white focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#7B5EA7] focus-visible:shadow-[0_0_0_4px_rgba(123,94,167,0.15)] transition-[border-color,box-shadow] duration-200"
+        style={{
+          fontFamily: '"DM Sans", sans-serif',
+          fontSize: '13.5px',
+          color: '#3A2855',
+          padding: '0 18px',
+          height: '40px',
+        }}
       />
 
-      <Button
+      <button
         onClick={handleSend}
         disabled={disabled || !value.trim()}
-        size="icon"
         aria-label="Mesaj gönder"
-        className="rounded-full bg-gradient-to-br from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700"
+        className="relative overflow-hidden flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full disabled:opacity-40"
+        style={{
+          background: '#7B5EA7',
+          color: '#FFFFFF',
+          border: 'none',
+          cursor: disabled || !value.trim() ? 'default' : 'pointer',
+          transition: 'transform 180ms cubic-bezier(0.34,1.56,0.64,1), box-shadow 180ms ease',
+        }}
+        onMouseEnter={e => { if (!disabled && value.trim()) { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.12)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 20px rgba(123,94,167,0.45)'; } }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none'; }}
+        onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.92)'; }}
+        onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.12)'; }}
       >
         <Send size={16} />
-      </Button>
+        {rippleActive && (
+          <span
+            className="absolute inset-0 rounded-full pointer-events-none"
+            style={{ background: 'white', animation: 'ripple-out 450ms ease-out both' }}
+          />
+        )}
+      </button>
     </div>
   );
 }

@@ -147,12 +147,43 @@ body {
 @keyframes float-y  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
 @keyframes rotate-border { to { --border-angle: 360deg; } }
 @keyframes swatch-select { 0%{transform:scale(1)} 50%{transform:scale(1.2)} 100%{transform:scale(1)} }
+@keyframes msg-in      { from{opacity:0;transform:translateY(22px) scale(0.95)} to{opacity:1;transform:translateY(0) scale(1)} }
+@keyframes online-ring { 0%{box-shadow:0 0 0 0 rgba(158,201,168,0.8)} 70%{box-shadow:0 0 0 7px rgba(158,201,168,0)} 100%{box-shadow:0 0 0 0 rgba(158,201,168,0)} }
+@keyframes ripple-out  { from{transform:scale(0);opacity:0.35} to{transform:scale(4);opacity:0} }
+@keyframes success-pop { 0%{transform:scale(0.92)} 55%{transform:scale(1.04)} 100%{transform:scale(1)} }
+@keyframes flash-white { 0%{opacity:0} 25%{opacity:0.18} 100%{opacity:0} }
 
 /* ═══════════════════════════════════════════════════════════════
    UTILITY
 ═══════════════════════════════════════════════════════════════ */
 .anim-up  { animation: fade-slide-up 0.5s ease both; }
 .anim-in  { animation: fade-in 0.4s ease both; }
+.msg-enter      { animation: msg-in 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.online-dot     { animation: online-ring 2s ease-out infinite; border-radius: 50%; }
+.success-bubble { animation: success-pop 500ms cubic-bezier(0.34, 1.56, 0.64, 1) both !important; }
+
+.quick-reply-chip {
+  background: #FAF8FE;
+  border: 1px solid #D8CEEA;
+  transition: background 200ms ease, border-color 200ms ease,
+              transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 200ms ease;
+}
+.quick-reply-chip:not(:disabled):hover {
+  background: #F0EAF8;
+  border-color: #B8A0E0;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(123, 94, 167, 0.18);
+}
+.quick-reply-chip:not(:disabled):active {
+  transform: translateY(0) scale(0.96);
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .msg-enter, .online-dot, .success-bubble { animation: none !important; }
+  .quick-reply-chip { transition: background 0ms, border-color 0ms; }
+}
 
 .orb-a    { animation: orb-a 18s ease-in-out infinite; }
 .orb-b    { animation: orb-b 22s ease-in-out infinite; }
