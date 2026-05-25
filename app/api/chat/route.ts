@@ -8,6 +8,7 @@ import { listStaff } from '@/lib/staff';
 import { getNotesForCustomer } from '@/lib/customer-notes';
 import { sendSMS, buildConfirmationMessage } from '@/lib/sms';
 import { isSlotStillAvailable } from '@/lib/booking-lock';
+import { releaseSlot } from '@/lib/booking-hold';
 import { rateLimit } from '@/lib/rate-limit';
 import { safeCalendarOp } from '@/lib/safeCalendarOp';
 import { logger } from '@/lib/logger';
@@ -88,6 +89,7 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
     try {
       const stillFree = await isSlotStillAvailable(toolInput.date, toolInput.time, duration, undefined, staffId);
       if (!stillFree) {
+        releaseSlot(toolInput.date, toolInput.time, staffId);
         return JSON.stringify({
           success: false,
           error: 'conflict',
@@ -141,6 +143,7 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
       } catch (smsErr) {
         console.error('[book_appointment] SMS onay gönderilemedi (devam):', smsErr);
       }
+      releaseSlot(toolInput.date, toolInput.time, staffId);
       return JSON.stringify({ success: true, appointmentId: appointment.id });
     } catch (err) {
       console.error('[book_appointment] Airtable error:', err);
@@ -408,7 +411,9 @@ Geçmiş tarihe (${todayISO} öncesi) randevu oluşturma — müşteriye bugün 
                   try {
                     const parsed = JSON.parse(result) as { available?: boolean; slots?: string[] };
                     if (parsed.available === true && Array.isArray(parsed.slots) && parsed.slots.length > 0) {
-                      controller.enqueue(encoder.encode(`\x00SLOTS:${parsed.slots.join(',')}\x00`));
+                      const date = input.date ?? '';
+                      const staffPart = input.staff_id ? `staff=${input.staff_id};` : '';
+                      controller.enqueue(encoder.encode(`\x00SLOTS:date=${date};${staffPart}times=${parsed.slots.join(',')}\x00`));
                     }
                   } catch { /* malformed JSON — marker atla */ }
                 }

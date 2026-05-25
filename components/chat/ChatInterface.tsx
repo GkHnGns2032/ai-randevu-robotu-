@@ -71,7 +71,7 @@ export function ChatInterface() {
   const [loading, setLoading] = useState(false);
   const [showFlash, setShowFlash] = useState(false);
   const [welcomeIn, setWelcomeIn] = useState(false);
-  const [pendingSlots, setPendingSlots] = useState<string[]>([]);
+  const [pendingSlots, setPendingSlots] = useState<{ date: string; staffId?: string; times: string[] } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastMsgRef = useRef<HTMLDivElement>(null);
   const confettiMsgRef = useRef<string | null>(null);
@@ -131,7 +131,7 @@ export function ChatInterface() {
   }, [lastMessageId, lastMessageRole, loading]);
 
   async function handleSend(text: string) {
-    setPendingSlots([]);
+    setPendingSlots(null);
     const userMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: text, timestamp: new Date() };
     newMsgIdsRef.current.add(userMessage.id!);
     const updatedMessages = [...messages, userMessage];
@@ -166,9 +166,13 @@ export function ChatInterface() {
         let chunk = decoder.decode(value, { stream: true });
         if (!chunk) continue;
 
-        const markerMatch = chunk.match(/\x00SLOTS:([^\x00]+)\x00/);
+        const markerMatch = chunk.match(/\x00SLOTS:date=([^;]+);(?:staff=([^;]*);)?times=([^\x00]+)\x00/);
         if (markerMatch) {
-          setPendingSlots(markerMatch[1].split(','));
+          setPendingSlots({
+            date: markerMatch[1],
+            staffId: markerMatch[2] || undefined,
+            times: markerMatch[3].split(','),
+          });
           chunk = chunk.replace(/\x00SLOTS:[^\x00]+\x00/g, '');
         }
         if (!chunk) continue;
@@ -225,7 +229,7 @@ export function ChatInterface() {
           <button
             onClick={() => {
               setMessages([INITIAL_MESSAGE]);
-              setPendingSlots([]);
+              setPendingSlots(null);
               localStorage.removeItem('bella-chat-history');
             }}
             className="transition-colors hover:opacity-80"
@@ -287,12 +291,18 @@ export function ChatInterface() {
           </div>
         )}
 
-        {pendingSlots.length > 0 && lastMessageRole === 'assistant' && !loading && (
+        {pendingSlots && pendingSlots.times.length > 0 && lastMessageRole === 'assistant' && !loading && (
           <div className="ml-[56px] mt-[-8px] mb-5">
             <SlotPicker
-              slots={pendingSlots}
+              slots={pendingSlots.times}
               onSelect={(time) => {
-                setPendingSlots([]);
+                const captured = pendingSlots;
+                setPendingSlots(null);
+                fetch('/api/hold-slot', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ date: captured.date, time, staffId: captured.staffId }),
+                }).catch(() => { /* hold fail — book sirasinda isSlotStillAvailable double-check korur */ });
                 handleSend(time);
               }}
             />

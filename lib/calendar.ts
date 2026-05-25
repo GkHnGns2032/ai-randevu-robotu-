@@ -5,6 +5,7 @@ import { TimeSlot, WORKING_HOURS } from './types';
 import { CLIENT_CONFIG } from '@/config/client';
 import { getAppointmentsByDate } from './airtable';
 import { logger } from './logger';
+import { isSlotHeld } from './booking-hold';
 
 function formatIstanbulTime(date: Date): string {
   return new Intl.DateTimeFormat('en-GB', {
@@ -70,7 +71,8 @@ async function getStaffAwareSlots(
       return slotStart < existingEnd && slotEnd > existingStart;
     });
 
-    slots.push({ date, time, available: !isBlocked });
+    const held = isSlotHeld(date, time, staffId);
+    slots.push({ date, time, available: !isBlocked && !held });
     cursor = addMinutes(cursor, WORKING_HOURS.slotMinutes);
   }
 
@@ -121,10 +123,12 @@ export async function getAvailableSlots(
       return cursor < busyEnd && slotEnd > busyStart;
     });
 
+    const time = formatIstanbulTime(cursor);
+    const held = isSlotHeld(date, time);
     slots.push({
       date,
-      time: formatIstanbulTime(cursor),
-      available: !isBlocked,
+      time,
+      available: !isBlocked && !held,
     });
 
     cursor = addMinutes(cursor, WORKING_HOURS.slotMinutes);
