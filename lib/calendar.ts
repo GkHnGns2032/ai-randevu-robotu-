@@ -46,6 +46,7 @@ async function getStaffAwareSlots(
   date: string,
   durationMinutes: number,
   staffId: string,
+  ignoreHolds = false,
 ): Promise<TimeSlot[]> {
   const startHour = String(WORKING_HOURS.start).padStart(2, '0');
   const endHour = String(WORKING_HOURS.end).padStart(2, '0');
@@ -71,7 +72,7 @@ async function getStaffAwareSlots(
       return slotStart < existingEnd && slotEnd > existingStart;
     });
 
-    const held = isSlotHeld(date, time, staffId);
+    const held = ignoreHolds ? false : isSlotHeld(date, time, staffId);
     slots.push({ date, time, available: !isBlocked && !held });
     cursor = addMinutes(cursor, WORKING_HOURS.slotMinutes);
   }
@@ -83,9 +84,10 @@ export async function getAvailableSlots(
   date: string,
   durationMinutes: number,
   staffId?: string,
+  ignoreHolds = false,
 ): Promise<TimeSlot[]> {
   if (staffId) {
-    return getStaffAwareSlots(date, durationMinutes, staffId);
+    return getStaffAwareSlots(date, durationMinutes, staffId, ignoreHolds);
   }
 
   const calendar = getCalendarClient();
@@ -124,7 +126,7 @@ export async function getAvailableSlots(
     });
 
     const time = formatIstanbulTime(cursor);
-    const held = isSlotHeld(date, time);
+    const held = ignoreHolds ? false : isSlotHeld(date, time);
     slots.push({
       date,
       time,

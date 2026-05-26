@@ -30,11 +30,13 @@ async function executeTool(toolName: string, toolInput: Record<string, string>):
     try {
       const service = toolInput.service as ServiceType;
       const duration = SERVICE_DURATIONS[service] ?? 60;
-      const slots = await getAvailableSlots(toolInput.date, duration, toolInput.staff_id || undefined);
+      const requestedTime = toolInput.requested_time;
+      // booking doğrulaması (requested_time var) → aynı session'ın kendi hold'u engellemesin
+      const ignoreHolds = !!requestedTime;
+      const slots = await getAvailableSlots(toolInput.date, duration, toolInput.staff_id || undefined, ignoreHolds);
       const available = slots.filter((s) => s.available);
 
       const slotList = available.map((s) => s.time);
-      const requestedTime = toolInput.requested_time;
 
       // Müşteri spesifik saat istediyse — net yanıt ver
       if (requestedTime) {
