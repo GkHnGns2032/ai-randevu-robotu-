@@ -21,8 +21,9 @@ export async function isSlotStillAvailable(
   const conflict = dayAppointments.some((a: Appointment) => {
     if (a.status === 'cancelled') return false;
     if (excludeAppointmentId && a.id === excludeAppointmentId) return false;
-    // Staff filtresi: staffId verildiyse sadece aynı personele ait randevularla çakışmayı say
-    if (staffId && a.staffId !== staffId) return false;
+    // Her iki tarafta da staffId varsa ve farklılarsa çakışma yok (bağımsız personel)
+    // Mevcut randevunun staffId'si yoksa tüm personel için bloklar (legacy / bilinmeyen)
+    if (staffId && a.staffId && a.staffId !== staffId) return false;
     const existingStart = toMinutes(a.time);
     const existingEnd = existingStart + a.durationMinutes;
     return requestedStart < existingEnd && requestedEnd > existingStart;

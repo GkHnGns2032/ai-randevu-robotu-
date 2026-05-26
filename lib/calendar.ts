@@ -45,7 +45,7 @@ function toMinutes(time: string): number {
 async function getStaffAwareSlots(
   date: string,
   durationMinutes: number,
-  staffId: string,
+  staffId: string | undefined,
   ignoreHolds = false,
 ): Promise<TimeSlot[]> {
   const startHour = String(WORKING_HOURS.start).padStart(2, '0');
@@ -54,8 +54,12 @@ async function getStaffAwareSlots(
   const dayEnd = new Date(`${date}T${endHour}:00:00+03:00`);
 
   const dayAppointments = await getAppointmentsByDate(date);
+  // Hangi randevular bu slotu bloklar?
+  // - Aynı staffId → kesinlikle bloklar
+  // - staffId'siz mevcut randevu → tüm staff için bloklar (legacy / bilinmeyen personel)
+  // - Farklı staffId → bloklamaz (çoklu personel bağımsız çalışır, §5.1)
   const staffAppts = dayAppointments.filter(
-    (a) => a.status !== 'cancelled' && a.staffId === staffId,
+    (a) => a.status !== 'cancelled' && (!staffId || !a.staffId || a.staffId === staffId),
   );
 
   const slots: TimeSlot[] = [];
@@ -112,6 +116,8 @@ export async function getAvailableSlots(
   } catch (err) {
     if (!isCalendarAuthError(err)) throw err;
     logger.error('calendar_auth_revoked', { op: 'getAvailableSlots', date });
+    // GCal auth dead — Airtable'a düş (tüm personelsiz randevular bloklar)
+    return getStaffAwareSlots(date, durationMinutes, undefined, ignoreHolds);
   }
 
   const slots: TimeSlot[] = [];
