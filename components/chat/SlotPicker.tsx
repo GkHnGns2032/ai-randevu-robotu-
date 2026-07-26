@@ -19,14 +19,14 @@ export function SlotPicker({ slots, onSelect }: SlotPickerProps) {
     return (
       <div
         style={{
-          background: '#FFFFFF',
-          border: '0.5px solid #DDD0F0',
+          background: 'var(--c-surface-raised)',
+          border: '0.5px solid var(--c-brand-tint)',
           borderRadius: '14px',
           padding: '14px',
           boxShadow: '0 1px 6px rgba(107,80,128,0.07)',
         }}
       >
-        <p style={{ fontFamily: '"DM Sans", sans-serif', fontSize: '13px', color: '#8B7B95', margin: 0 }}>
+        <p style={{ fontFamily: 'var(--c-font-sans)', fontSize: '13px', color: 'var(--c-brand-subtle)', margin: 0 }}>
           Müsait saat bulunamadı.
         </p>
       </div>
@@ -36,8 +36,8 @@ export function SlotPicker({ slots, onSelect }: SlotPickerProps) {
   return (
     <div
       style={{
-        background: '#FFFFFF',
-        border: '0.5px solid #DDD0F0',
+        background: 'var(--c-surface-raised)',
+        border: '0.5px solid var(--c-brand-tint)',
         borderRadius: '14px',
         padding: '14px',
         boxShadow: '0 1px 6px rgba(107,80,128,0.07)',
@@ -45,12 +45,12 @@ export function SlotPicker({ slots, onSelect }: SlotPickerProps) {
     >
       <p
         style={{
-          fontFamily: '"DM Sans", sans-serif',
+          fontFamily: 'var(--c-font-sans)',
           fontSize: '11px',
           fontWeight: 400,
           letterSpacing: '0.3px',
           textTransform: 'uppercase' as const,
-          color: '#8B7B95',
+          color: 'var(--c-brand-subtle)',
           margin: '0 0 10px 0',
         }}
       >
@@ -70,12 +70,12 @@ export function SlotPicker({ slots, onSelect }: SlotPickerProps) {
             disabled={!!selected}
             aria-pressed={selected === time}
             style={{
-              background: selected === time ? '#EBE2F5' : '#FDFCF9',
-              border: `1px solid ${selected === time ? '#C9ADE0' : '#DDD0F0'}`,
-              color: '#6B3FA0',
+              background: selected === time ? 'var(--c-brand-soft)' : 'var(--c-surface)',
+              border: `1px solid ${selected === time ? 'var(--c-brand-tint-strong)' : 'var(--c-brand-tint)'}`,
+              color: 'var(--c-brand-strong)',
               padding: '11px 10px',
               borderRadius: '8px',
-              fontFamily: '"DM Sans", sans-serif',
+              fontFamily: 'var(--c-font-sans)',
               fontSize: '13px',
               fontWeight: 500,
               cursor: selected ? 'not-allowed' : 'pointer',

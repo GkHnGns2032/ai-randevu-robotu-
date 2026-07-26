@@ -94,7 +94,7 @@ export function ChatInput({ onSend, disabled }: Props) {
   }
 
   return (
-    <div className="flex gap-2 p-4" style={{ background: '#F5EEE8' }}>
+    <div className="flex gap-2 p-4" style={{ background: 'var(--c-page-to)' }}>
       {micState !== 'unsupported' && (
         <button
           onClick={toggleMic}
@@ -102,9 +102,9 @@ export function ChatInput({ onSend, disabled }: Props) {
           aria-label={micState === 'listening' ? 'Mikrofonu durdur' : 'Sesli yaz'}
           className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200"
           style={{
-            background: micState === 'listening' ? '#7B5EA7' : '#FAF8FE',
-            color: micState === 'listening' ? '#FFFFFF' : '#6B5080',
-            border: '1px solid #D8CEEA',
+            background: micState === 'listening' ? 'var(--c-brand)' : 'var(--c-chip-bg)',
+            color: micState === 'listening' ? 'var(--c-surface-raised)' : 'var(--c-brand-muted)',
+            border: '1px solid var(--c-chip-border)',
             animation: micState === 'listening' ? 'pulse 1.5s ease-in-out infinite' : 'none',
             boxShadow: micState === 'listening' ? '0 0 0 4px rgba(123,94,167,0.18)' : 'none',
           }}
@@ -119,11 +119,12 @@ export function ChatInput({ onSend, disabled }: Props) {
         onKeyDown={handleKeyDown}
         placeholder={micState === 'listening' ? 'Dinliyorum...' : 'Mesajınızı yazın...'}
         disabled={disabled}
-        className="flex-1 rounded-[24px] border-[#EDE4DA] bg-white focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#7B5EA7] focus-visible:shadow-[0_0_0_4px_rgba(123,94,167,0.15)] transition-[border-color,box-shadow] duration-200"
+        className="flex-1 rounded-[24px] border-[color:var(--c-border)] focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[color:var(--c-brand)] focus-visible:shadow-[0_0_0_4px_rgba(var(--c-brand-rgb),0.15)] transition-[border-color,box-shadow] duration-200"
         style={{
-          fontFamily: '"DM Sans", sans-serif',
+          fontFamily: 'var(--c-font-sans)',
           fontSize: '13.5px',
-          color: '#3A2855',
+          color: 'var(--c-brand-ink)',
+          background: 'var(--c-surface-raised)',
           padding: '0 18px',
           height: '40px',
         }}
@@ -135,8 +136,8 @@ export function ChatInput({ onSend, disabled }: Props) {
         aria-label="Mesaj gönder"
         className="relative overflow-hidden flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full disabled:opacity-40"
         style={{
-          background: '#7B5EA7',
-          color: '#FFFFFF',
+          background: 'var(--c-brand)',
+          color: 'var(--c-surface-raised)',
           border: 'none',
           cursor: disabled || !value.trim() ? 'default' : 'pointer',
           transition: 'transform 180ms cubic-bezier(0.34,1.56,0.64,1), box-shadow 180ms ease',

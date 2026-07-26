@@ -15,7 +15,10 @@ function launchConfetti() {
   document.body.appendChild(canvas);
   const ctx = canvas.getContext('2d');
   if (!ctx) { canvas.remove(); return; }
-  const colors = ['#EBE2F5', '#F7E2EC', '#C4AEE0', '#FFFFFF'];
+  // Canvas CSS değişkeni kabul etmez — tenant renklerini runtime'da çözüp veriyoruz.
+  const rootStyle = getComputedStyle(document.documentElement);
+  const colors = ['--c-confetti-1', '--c-confetti-2', '--c-confetti-3', '--c-confetti-4']
+    .map((v) => rootStyle.getPropertyValue(v).trim() || '#FFFFFF');
   const particles = Array.from({ length: 27 }, () => ({
     x: Math.random() * canvas.width,
     y: -10,
@@ -217,7 +220,7 @@ export function ChatInterface() {
   const showQuickReplies = messages.length === 1 && !loading;
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 relative" style={{ background: '#FDFCF9' }}>
+    <div className="flex flex-col flex-1 min-h-0 relative" style={{ background: 'var(--c-surface)' }}>
       {showFlash && (
         <div
           className="absolute inset-0 pointer-events-none"
@@ -234,12 +237,12 @@ export function ChatInterface() {
             }}
             className="transition-colors hover:opacity-80"
             style={{
-              fontFamily: '"DM Sans", sans-serif',
+              fontFamily: 'var(--c-font-sans)',
               fontSize: '11px',
               fontWeight: 300,
               letterSpacing: '0.3px',
               textTransform: 'uppercase',
-              color: '#8B7B95',
+              color: 'var(--c-brand-subtle)',
             }}
           >
             Yeni Sohbet
@@ -277,10 +280,10 @@ export function ChatInterface() {
                 disabled={loading}
                 className="quick-reply-chip disabled:opacity-50"
                 style={{
-                  fontFamily: '"DM Sans", sans-serif',
+                  fontFamily: 'var(--c-font-sans)',
                   fontSize: '12px',
                   fontWeight: 400,
-                  color: '#6B5080',
+                  color: 'var(--c-brand-muted)',
                   borderRadius: '20px',
                   padding: '7px 14px',
                 }}
@@ -314,8 +317,8 @@ export function ChatInterface() {
             <div
               className="w-11 h-11 rounded-full flex items-center justify-center text-lg shrink-0"
               style={{
-                background: 'linear-gradient(145deg, #F0E8F5, #F7E2EC)',
-                border: '1px solid #EDD8E8',
+                background: 'linear-gradient(145deg, var(--c-avatar-from), var(--c-avatar-to))',
+                border: '1px solid var(--c-avatar-border)',
               }}
             >
               🌸
@@ -323,8 +326,8 @@ export function ChatInterface() {
             <div
               style={{
                 padding: '13px 17px',
-                background: '#FFFFFF',
-                border: '0.5px solid #EDE4DA',
+                background: 'var(--c-surface-raised)',
+                border: '0.5px solid var(--c-border)',
                 borderRadius: '20px 20px 20px 4px',
                 display: 'flex',
                 gap: '5px',
@@ -337,7 +340,7 @@ export function ChatInterface() {
                   style={{
                     width: '5px',
                     height: '5px',
-                    background: '#C8B8D0',
+                    background: 'var(--c-dots)',
                     borderRadius: '50%',
                     display: 'inline-block',
                     animation: 'pulse-dot 1.4s ease-in-out infinite',

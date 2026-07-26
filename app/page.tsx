@@ -15,7 +15,7 @@ export default function HomePage() {
   return (
     <div
       className="min-h-screen"
-      style={{ background: 'radial-gradient(ellipse at center, #FDFCF9 0%, #F5EEE8 100%)' }}
+      style={{ background: 'radial-gradient(ellipse at center, var(--c-surface) 0%, var(--c-page-to) 100%)' }}
     >
       <div className="max-w-6xl mx-auto px-4 py-8 lg:py-16">
         {/* Hero */}
@@ -24,23 +24,23 @@ export default function HomePage() {
           <div
             className="inline-flex items-center gap-2 px-4 py-2 mb-8"
             style={{
-              background: '#FFFFFF',
-              border: '0.5px solid #EDE4DA',
+              background: 'var(--c-surface-raised)',
+              border: '0.5px solid var(--c-border)',
               borderRadius: '24px',
             }}
           >
             <div
               className="w-7 h-7 rounded-full flex items-center justify-center"
-              style={{ background: '#F5EEE8' }}
+              style={{ background: 'var(--c-page-to)' }}
             >
-              <Scissors size={14} style={{ color: '#7B5EA7' }} />
+              <Scissors size={14} style={{ color: 'var(--c-brand)' }} />
             </div>
             <span
               style={{
-                fontFamily: '"DM Sans", sans-serif',
+                fontFamily: 'var(--c-font-sans)',
                 fontSize: '13px',
                 fontWeight: 500,
-                color: '#7B5EA7',
+                color: 'var(--c-brand)',
               }}
             >
               {businessName}
@@ -52,10 +52,10 @@ export default function HomePage() {
             <span
               className="block"
               style={{
-                fontFamily: '"Cormorant Garamond", serif',
+                fontFamily: 'var(--c-font-serif)',
                 fontSize: 'clamp(42px, 6vw, 64px)',
                 fontWeight: 400,
-                color: '#2A2018',
+                color: 'var(--c-heading)',
                 lineHeight: 1.1,
               }}
             >
@@ -63,11 +63,11 @@ export default function HomePage() {
             </span>
             <span
               style={{
-                fontFamily: '"Cormorant Garamond", serif',
+                fontFamily: 'var(--c-font-serif)',
                 fontSize: 'clamp(42px, 6vw, 64px)',
                 fontWeight: 400,
                 fontStyle: 'italic',
-                color: '#7B5EA7',
+                color: 'var(--c-brand)',
                 lineHeight: 1.1,
               }}
             >
@@ -79,10 +79,10 @@ export default function HomePage() {
           <p
             className="mx-auto mb-8"
             style={{
-              fontFamily: '"DM Sans", sans-serif',
+              fontFamily: 'var(--c-font-sans)',
               fontWeight: 300,
               fontSize: '16px',
-              color: '#8A7A70',
+              color: 'var(--c-text-muted)',
               maxWidth: '480px',
               lineHeight: 1.7,
             }}
@@ -97,18 +97,18 @@ export default function HomePage() {
                 key={f.text}
                 className="flex items-center gap-2 px-4 py-2"
                 style={{
-                  background: '#FFFFFF',
-                  border: '0.5px solid #EDE4DA',
+                  background: 'var(--c-surface-raised)',
+                  border: '0.5px solid var(--c-border)',
                   borderRadius: '20px',
                 }}
               >
-                <f.icon size={14} style={{ color: '#7B5EA7' }} />
+                <f.icon size={14} style={{ color: 'var(--c-brand)' }} />
                 <span
                   style={{
-                    fontFamily: '"DM Sans", sans-serif',
+                    fontFamily: 'var(--c-font-sans)',
                     fontSize: '13px',
                     fontWeight: 400,
-                    color: '#5A4A40',
+                    color: 'var(--c-text-chip)',
                   }}
                 >
                   {f.text}
@@ -123,8 +123,8 @@ export default function HomePage() {
           <div
             className="rounded-3xl overflow-hidden h-[580px] flex flex-col"
             style={{
-              background: '#FDFCF9',
-              border: '0.5px solid #F0E8DF',
+              background: 'var(--c-surface)',
+              border: '0.5px solid var(--c-border-soft)',
               boxShadow: '0 4px 28px rgba(0,0,0,0.06)',
             }}
           >
@@ -132,16 +132,16 @@ export default function HomePage() {
             <div
               className="flex items-center gap-3"
               style={{
-                background: '#FDFCF9',
+                background: 'var(--c-surface)',
                 padding: '22px 22px 16px',
-                borderBottom: '0.5px solid #F0E8DF',
+                borderBottom: '0.5px solid var(--c-border-soft)',
               }}
             >
               <div
                 className="w-11 h-11 rounded-full flex items-center justify-center text-lg shrink-0"
                 style={{
-                  background: 'linear-gradient(145deg, #F0E8F5, #F7E2EC)',
-                  border: '1px solid #EDD8E8',
+                  background: 'linear-gradient(145deg, var(--c-avatar-from), var(--c-avatar-to))',
+                  border: '1px solid var(--c-avatar-border)',
                 }}
               >
                 🌸
@@ -149,10 +149,10 @@ export default function HomePage() {
               <div>
                 <p
                   style={{
-                    fontFamily: '"Cormorant Garamond", serif',
+                    fontFamily: 'var(--c-font-serif)',
                     fontSize: '18px',
                     fontWeight: 500,
-                    color: '#3A2855',
+                    color: 'var(--c-brand-ink)',
                     lineHeight: 1.2,
                   }}
                 >
@@ -165,18 +165,18 @@ export default function HomePage() {
                       width: '5px',
                       height: '5px',
                       borderRadius: '50%',
-                      background: '#9EC9A8',
+                      background: 'var(--c-online)',
                       display: 'inline-block',
                     }}
                   />
                   <p
                     style={{
-                      fontFamily: '"DM Sans", sans-serif',
+                      fontFamily: 'var(--c-font-sans)',
                       fontSize: '11px',
                       fontWeight: 300,
                       letterSpacing: '0.3px',
                       textTransform: 'uppercase',
-                      color: '#8B7B95',
+                      color: 'var(--c-brand-subtle)',
                     }}
                   >
                     Çevrimiçi

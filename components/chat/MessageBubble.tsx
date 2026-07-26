@@ -37,8 +37,8 @@ export function MessageBubble({ message, isNew }: Props) {
         <div
           className="w-11 h-11 rounded-full flex items-center justify-center text-lg shrink-0"
           style={{
-            background: 'linear-gradient(145deg, #F0E8F5, #F7E2EC)',
-            border: '1px solid #EDD8E8',
+            background: 'linear-gradient(145deg, var(--c-avatar-from), var(--c-avatar-to))',
+            border: '1px solid var(--c-avatar-border)',
           }}
         >
           🌸
@@ -50,13 +50,13 @@ export function MessageBubble({ message, isNew }: Props) {
           className={isSuccess ? 'success-bubble' : undefined}
           style={{
             padding: '13px 17px',
-            fontFamily: '"DM Sans", sans-serif',
+            fontFamily: 'var(--c-font-sans)',
             fontSize: '13.5px',
             fontWeight: 400,
             lineHeight: 1.6,
-            color: '#3A2855',
-            background: isUser ? '#EBE2F5' : '#FFFFFF',
-            border: isSuccess ? '1px solid #9EC9A8' : isUser ? 'none' : '0.5px solid #EDE4DA',
+            color: 'var(--c-brand-ink)',
+            background: isUser ? 'var(--c-brand-soft)' : 'var(--c-surface-raised)',
+            border: isSuccess ? '1px solid var(--c-online)' : isUser ? 'none' : '0.5px solid var(--c-border)',
             borderRadius: isUser ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
           }}
         />
@@ -64,10 +64,10 @@ export function MessageBubble({ message, isNew }: Props) {
           suppressHydrationWarning
           className="mt-1.5 px-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
           style={{
-            fontFamily: '"DM Sans", sans-serif',
+            fontFamily: 'var(--c-font-sans)',
             fontSize: '10px',
             fontWeight: 300,
-            color: '#C8BAB0',
+            color: 'var(--c-text-faint)',
           }}
         >
           {format(message.timestamp, 'HH:mm', { locale: tr })}
