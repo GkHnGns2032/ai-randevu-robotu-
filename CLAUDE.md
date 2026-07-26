@@ -6,7 +6,7 @@
 > Teknik kurulum (stack, env tablosu, deploy) için: **[README.md](README.md)**.
 > Bu dosya ikisini tekrarlamaz; Claude'un proje üzerinde çalışırken hızla bağlama girmesi için gereken özetleri verir.
 >
-> Son güncelleme: 2026-07-26 (KRİTİK: Airtable tarih filtresi fix'i §5.9 — çift rezervasyon koruması tümüyle ölüydü; ayrıca BD-UI-TOKEN token katmanı §5.8, slot-hold smoke test 11/11)
+> Son güncelleme: 2026-07-26 (BD-UI-DASHBOARD — panel görev-öncelikli IA §5.10; ayrıca KRİTİK Airtable tarih fix'i §5.9, token katmanı §5.8)
 
 ---
 
@@ -139,6 +139,22 @@ git reset --hard v1.0-starter        # Faz 1 MVP state
 
 [app/api/chat/route.ts:274-316](app/api/chat/route.ts) — UTC+3 sabit (Türkiye 2016'dan beri DST yok). Her chat çağrısında "BUGÜN BAĞLAMI" bloğu system prompt'a inject ediliyor (göreceli tarih halüsinasyonunu önlemek için).
 
+### 5.10 Panel Bilgi Mimarisi — Görev Öncelikli 5 Görünüm (BD-UI-DASHBOARD, 2026-07-26)
+
+**Önceki tasarım:** 8 bölümlük tek scroll, sırası sunum sırası (gelir → AI analiz → ısı haritası → takvim). Günlük iş "bugün ne var" olduğu hâlde o bilgiye ulaşmak üç analitik bölümü geçmeyi gerektiriyordu.
+
+**Karar:** İş türüne göre beş görünüm — **Bugün · Takvim · Müşteriler · Ekip · Analiz**. [DashboardShell](components/dashboard/DashboardShell.tsx) kabuk + navigasyon; aktif görünüm **URL'de** (`?g=takvim`).
+
+**Neden URL, route değil:** Link paylaşılabilir ve geri tuşu çalışır (route bölmenin faydası), ama veri tek seferde çekilir — `page.tsx` `listAppointments()` + `listStaff()` bir kez koşar ve tüm görünümler aynı veriyi kullanır. Route'a bölünürse her geçişte yeni fetch olurdu.
+
+**Bugün görünümü** ([views/TodayView.tsx](components/dashboard/views/TodayView.tsx)) panelin varsayılanı: sıradaki randevu (geri sayım + Ara/Ertele/Gelmedi) + günün zaman çizelgesi.
+
+**Mobil kuralı:** Bu tur öncesi tüm uygulamada 9 responsive utility vardı. Yeni bileşenlerde 375/768/1440 üçlüsü ölçülür; yatay taşma kabul edilmez. Görünüm sekmeleri mobilde 5'li ızgara (ikon üstte) — kaydırma gerektirmez.
+
+**Servis renkleri:** [lib/service-color.ts](lib/service-color.ts) — tenant'ın kendi hizmet sırasından türer, panel paleti token'larını kullanır. Hizmet adına gömülü hex tablosu **yazma**; başka tenant'ta eşleşmez.
+
+**Ölü kod:** `NextAppointment.tsx` ve `TodaySummary.tsx` artık import edilmiyor (TodayView yerlerini aldı). Silinmedi — dosya silme kritik kategoride.
+
 ### 5.9 Airtable Tarih Filtresi — `DATESTR()` ZORUNLU (2026-07-26)
 
 **Kural:** Airtable formülünde tarih karşılaştırırken **asla** `{date} = "YYYY-MM-DD"` yazma. `DATESTR({date}) = "YYYY-MM-DD"` kullan.
@@ -188,6 +204,7 @@ GCal create hatası, SMS gönderim hatası — yakalanır, loglanır, randevu Ai
 | BD-UI-SLOT-HOLD | Tamam — smoke test 11/11 geçti, main'e merge edildi | `v1.13.1-slot-hold-baseline` (öncesi) | `BD-UI-SLOT-HOLD` (merge edildi) |
 | BD-UI-TOKEN | Tamam (müşteri yüzeyi token katmanı + tenant marka, §5.8), main'e merge edildi | `v1.13.2-token-baseline` (öncesi) → `v1.14-bd-ui-token` | `BD-UI-TOKEN` (merge edildi) |
 | FIX-AIRTABLE-DATE | **Kritik** — tarih filtresi hiçbir randevuyu bulamıyordu, çift rezervasyon açıktı (§5.9). main'de, **push bekliyor** | → `v1.15-airtable-date-fix` | `fix-airtable-date-filter` (merge edildi) |
+| BD-UI-DASHBOARD | Panel görev-öncelikli IA (5 görünüm) + mobil, §5.10. **Lokal, push bekliyor** | `v1.15.1-dashboard-baseline` (öncesi) | `BD-UI-DASHBOARD` |
 | BD4+ | Deferred — bkz §7 |
 
 **Branch akışı kuralı:** Feature/fix → ayrı branch → atomik commit'ler → onay → main merge → tag → push. Branch'ler `--merged main` olunca toplu cleanup (`git branch -d <isim>` + `git push origin --delete <isim>`).
