@@ -6,7 +6,7 @@
 > Teknik kurulum (stack, env tablosu, deploy) için: **[README.md](README.md)**.
 > Bu dosya ikisini tekrarlamaz; Claude'un proje üzerinde çalışırken hızla bağlama girmesi için gereken özetleri verir.
 >
-> Son güncelleme: 2026-05-19 (BD-INFRA-3 CRON_SECRET + BD-INFRA-CLAUDE-MD-S9-FIX ardışık kapanış — Vercel cron auth Bearer header'a geçti + §9 `.claude/skills/` exception drift düzeltmesi)
+> Son güncelleme: 2026-07-26 (BD-UI-TOKEN — müşteri yüzeyi tenant token katmanı, next/font geçişi, panel FOUC fix; §5.8 eklendi)
 
 ---
 
@@ -33,6 +33,8 @@ Kullanıcı (Gökhan) handoff metni vermeden iş başlatma. Eski handoff dosyala
 | Takvim | Google Calendar (OAuth refresh token) |
 | SMS | Twilio (onay + 2 saat öncesi hatırlatma) |
 | UI | Tailwind, shadcn-style local components, recharts |
+| Fontlar | `next/font/google` (Cormorant Garamond + DM Sans), build'de self-host + preload, `latin-ext` subset zorunlu (Türkçe karakterler) |
+| Tema | Panel: 8 palet (`[data-theme]`) · Müşteri yüzeyi: `--c-*` tenant token'ları (bkz §5.8) |
 | Deploy | Vercel (`main` push = auto-deploy) |
 
 Detay env tablosu + lokal kurulum için **[README.md](README.md)** (kök).
@@ -77,6 +79,7 @@ git reset --hard v1.0-starter        # Faz 1 MVP state
 - [sms.ts](lib/sms.ts) — Twilio wrapper, hata randevuyu bloklamaz
 - [ai-tools.ts](lib/ai-tools.ts) — Anthropic tool şemaları + SYSTEM_PROMPT
 - [types.ts](lib/types.ts) — `Appointment`, `ServiceType`, `WORKING_HOURS`
+- [brand.ts](lib/brand.ts) — tenant marka bloğunu `--c-*` CSS değişkenlerine çevirir; `app/layout.tsx` bunu `<html>` üzerine basar (bkz §5.8)
 
 **Yapılandırma** ([config/](config/)):
 - [config/clients/](config/clients/) — her tenant'ın işletme adı, asistan adı, hizmet listesi (isim/süre/fiyat), çalışma saatleri ayrı dosyada (`<slug>.ts`)
@@ -129,6 +132,22 @@ git reset --hard v1.0-starter        # Faz 1 MVP state
 
 [app/api/chat/route.ts:274-316](app/api/chat/route.ts) — UTC+3 sabit (Türkiye 2016'dan beri DST yok). Her chat çağrısında "BUGÜN BAĞLAMI" bloğu system prompt'a inject ediliyor (göreceli tarih halüsinasyonunu önlemek için).
 
+### 5.8 Müşteri Yüzeyi Token Katmanı — Tenant Markası (BD-UI-TOKEN, 2026-07-26)
+
+**Sorun:** Panelde 460 `var(--*)` kullanımı vardı, müşteriye bakan yüzeyde (`app/page.tsx` + `components/chat/`) **sıfır** — 68 hex elle gömülüydü. Multi-tenant altyapısı vardı ama yeni müşteri Bella'nın mor-kremini almak zorundaydı.
+
+**Karar:** İki ayrı token uzayı:
+- **Panel** → `[data-theme="..."]` altındaki 8 palet. Operatör seçer, `localStorage`'da tutulur. Dokunulmadı.
+- **Müşteri yüzeyi** → [globals.css](app/globals.css) `:root` altında `--c-*` seti. Kaynağı `config/clients/<slug>.ts` içindeki `brand` bloğu; [lib/brand.ts](lib/brand.ts) camelCase→`--c-kebab-case` çevirir, [layout.tsx](app/layout.tsx) `<html>` üzerine **inline** basar (ilk boyamada doğru).
+
+**Namespace kuralı — önemli:** Inline style `<html>`'e bindiği için `[data-theme]` kurallarını ezer. Bu yüzden marka bloğundan **sadece `--c-*` basılır**, panel değişkeni (`--bg`, `--gold` …) asla. Bu ayrımı bozma.
+
+**Font sınırı:** `fontSerif`/`fontSans` bilerek config'de yok — font yüklemesi `next/font` ile build-time. Tenant font değiştirecekse `layout.tsx`'e de satır eklenmeli.
+
+**Kanıt:** `NEXT_PUBLIC_CLIENT_ID=demo` ([config/clients/demo.ts](config/clients/demo.ts)) → başlık, marka rengi, avatar emoji ve panel açılış paleti tümüyle değişiyor. Bella tarafında geçiş öncesi/sonrası piksel farkı 0.
+
+**Yan kapanışlar:** panel FOUC (tema mount sonrası okunuyordu), `.theme-transition *` kalıcı transition, `Courier New`, ölü `welcomeEmoji`, tanımsız `pulse` keyframe.
+
 ### 5.7 Hatalı GCal/SMS Asla Bloklamaz
 
 GCal create hatası, SMS gönderim hatası — yakalanır, loglanır, randevu Airtable'a yine yazılır. Tek kritik path: Airtable. Bu kasıtlı.
@@ -147,6 +166,7 @@ GCal create hatası, SMS gönderim hatası — yakalanır, loglanır, randevu Ai
 | BD-INFRA-SDK | Tamam (Anthropic SDK `^0.33.1` → `^0.96.0` prod canlı 2026-05-16, 17 ay açık kapandı) | `v1.8.1-bd-infra-sdk-baseline` (öncesi) → `v1.9-bd-infra-sdk-v096` (sonrası) | `bd-infra-sdk-upgrade` (merge sonrası lokal+remote duruyor, toplu cleanup turunda silinir) |
 | BD-INFRA-MT-LOADER | Tamam (multi-tenant Yol A iskelet loader prod 2026-05-17, single-tenant tasarım Aşama 0-1 Yol A'ya geçti) | `v1.9.2-mt-loader-baseline` (öncesi) → `v1.10-bd-infra-mt-loader` (sonrası) | `bd-infra-mt-loader` (merge sonrası toplu cleanup turunda silinir) |
 | BD-INFRA-3-CRON-SECRET | Tamam (Vercel cron auth pattern `?secret=` query → `Authorization: Bearer` header geçişi + `vercel.json` crons array, prod canlı 2026-05-19; BD-INFRA-3 toplu askıları tümüyle kapandı) | `v1.11.1-cron-secret-baseline` (öncesi) → `v1.12-bd-infra-3-cron-secret` (sonrası) | main (feature branch'siz) |
+| BD-UI-TOKEN | **Lokal tamam, merge/push bekliyor** (müşteri yüzeyi token katmanı + tenant marka, §5.8) | `v1.13.2-token-baseline` (öncesi) → `v1.14-bd-ui-token` (sonrası) | `BD-UI-TOKEN` (BD-UI-SLOT-HOLD üstünden dallandı) |
 | BD4+ | Deferred — bkz §7 |
 
 **Branch akışı kuralı:** Feature/fix → ayrı branch → atomik commit'ler → onay → main merge → tag → push. Branch'ler `--merged main` olunca toplu cleanup (`git branch -d <isim>` + `git push origin --delete <isim>`).
