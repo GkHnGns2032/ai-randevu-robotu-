@@ -58,7 +58,7 @@ function launchConfetti() {
   setTimeout(() => { cancelAnimationFrame(raf); canvas.remove(); }, duration + 100);
 }
 
-const { assistantName, businessName } = CLIENT_CONFIG;
+const { assistantName, businessName, welcomeEmoji } = CLIENT_CONFIG;
 
 const INITIAL_MESSAGE: ChatMessage = {
   id: 'initial',
@@ -321,7 +321,7 @@ export function ChatInterface() {
                 border: '1px solid var(--c-avatar-border)',
               }}
             >
-              🌸
+              {welcomeEmoji}
             </div>
             <div
               style={{

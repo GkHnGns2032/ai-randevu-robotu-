@@ -9,7 +9,7 @@ const FEATURES = [
   { icon: Shield, text: 'Güvenli & Kolay' },
 ];
 
-const { businessName, assistantName } = CLIENT_CONFIG;
+const { businessName, assistantName, welcomeEmoji } = CLIENT_CONFIG;
 
 export default function HomePage() {
   return (
@@ -144,7 +144,7 @@ export default function HomePage() {
                   border: '1px solid var(--c-avatar-border)',
                 }}
               >
-                🌸
+                {welcomeEmoji}
               </div>
               <div>
                 <p

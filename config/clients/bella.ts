@@ -8,7 +8,7 @@ export const CLIENT_CONFIG = {
   // İşletme bilgileri
   businessName: 'Bella Güzellik Salonu',
   assistantName: 'Bella',
-  welcomeEmoji: '💇‍♀️',
+  welcomeEmoji: '🌸',   // sohbet avatari — onceden kodda sabitti, config yok sayiliyordu
 
   // Hizmetler — isim, süre (dk), fiyat (₺)
   services: [

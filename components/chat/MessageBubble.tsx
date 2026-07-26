@@ -2,7 +2,10 @@
 import { ChatMessage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { CLIENT_CONFIG } from '@/config/client';
 import { tr } from 'date-fns/locale';
+
+const { welcomeEmoji } = CLIENT_CONFIG;
 
 interface Props {
   message: ChatMessage;
@@ -41,7 +44,7 @@ export function MessageBubble({ message, isNew }: Props) {
             border: '1px solid var(--c-avatar-border)',
           }}
         >
-          🌸
+          {welcomeEmoji}
         </div>
       )}
       <div className={cn('flex flex-col max-w-[75%] group', isUser ? 'items-end' : 'items-start')}>

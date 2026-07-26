@@ -7,9 +7,11 @@
 // ─────────────────────────────────────────────────────────────
 
 import * as bella from './clients/bella';
+import * as demo from './clients/demo';
 
 const clients = {
   bella,
+  demo, // örnek tenant — onboarding şablonu, gerçek müşteri değil
 } as const;
 
 type ClientId = keyof typeof clients;
