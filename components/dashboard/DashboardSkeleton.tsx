@@ -37,72 +37,51 @@ function Card({ children, minHeight, delay = 0 }: { children?: React.ReactNode; 
   );
 }
 
-function SectionCard({ title, delay, minBody }: { title: string; delay: number; minBody: number }) {
-  return (
-    <Card minHeight={minBody + 60} delay={delay}>
-      <div className="px-6 pt-5 pb-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
-        <span className="text-[10px] font-semibold tracking-[0.2em] uppercase" style={{ color: 'var(--text-3)' }}>
-          {title}
-        </span>
-        <div className="h-px flex-1 mx-4" style={{ background: 'linear-gradient(90deg, var(--border), transparent)' }} />
-      </div>
-      <div className="p-6 space-y-3">
-        <Bar w="85%" h={14} />
-        <Bar w="70%" h={14} />
-        <Bar w="55%" h={14} />
-      </div>
-    </Card>
-  );
-}
 
+/**
+ * Yükleme iskeleti — açılış görünümünün ("Bugün") şeklini taklit eder.
+ * Önceden eski tek-scroll düzenini çiziyordu (StatsOverview hero + 5 bölüm);
+ * yeni yapı yüklendiğinde belirgin bir layout kayması oluyordu.
+ */
 export function DashboardSkeleton() {
   return (
-    <div className="space-y-6">
-      {/* Top row: NextAppointment + TodaySummary + VoiceSummary */}
-      <div className="flex items-start gap-4 flex-wrap">
-        <Card minHeight={120} delay={0}>
-          <div className="p-6 space-y-3">
-            <Bar w={80} h={10} />
-            <Bar w="60%" h={28} />
-            <Bar w="40%" h={12} />
-          </div>
-        </Card>
-        <Card minHeight={120} delay={50}>
-          <div className="p-6 space-y-3">
-            <Bar w={80} h={10} />
-            <div className="flex gap-6 pt-2">
-              <Bar w={60} h={32} />
-              <Bar w={60} h={32} />
-              <Bar w={60} h={32} />
-            </div>
-          </div>
-        </Card>
+    <div className="space-y-5">
+      {/* Görünüm sekmeleri */}
+      <div className="grid grid-cols-5 gap-1 sm:flex sm:gap-2">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="rounded-xl sm:w-28"
+            style={{ height: 52, background: 'var(--bg-card)', opacity: 0.5 }}
+          />
+        ))}
       </div>
 
-      {/* StatsOverview hero */}
-      <Card minHeight={680} delay={100}>
-        <div className="flex flex-col items-center justify-center py-16 gap-5">
-          <Bar w={160} h={10} />
-          <Bar w={260} h={64} />
-          <Bar w={180} h={24} />
-          <div className="flex gap-10 pt-4">
-            <div className="flex flex-col items-center gap-2">
-              <Bar w={70} h={10} />
-              <Bar w={110} h={30} />
-            </div>
-            <div className="flex flex-col items-center gap-2">
-              <Bar w={70} h={10} />
-              <Bar w={110} h={30} />
-            </div>
-          </div>
+      {/* Sıradaki randevu kartı */}
+      <Card minHeight={150} delay={0}>
+        <div className="p-5 sm:p-6 space-y-3">
+          <Bar w={80} h={10} />
+          <Bar w="45%" h={34} />
+          <Bar w="60%" h={14} />
+          <Bar w="40%" h={12} />
         </div>
       </Card>
 
-      <SectionCard title="Akıllı Analiz" delay={200} minBody={120} />
-      <SectionCard title="Haftalık Takvim" delay={300} minBody={260} />
-      <SectionCard title="Müşteriler" delay={400} minBody={180} />
-      <SectionCard title="Personel" delay={450} minBody={100} />
-      <SectionCard title="Tüm Randevular" delay={500} minBody={240} />
+      {/* Bugünün zaman çizelgesi */}
+      <Card minHeight={340} delay={100}>
+        <div className="p-5 sm:p-6 space-y-4">
+          <Bar w={140} h={12} />
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex items-center gap-4 pt-1">
+              <Bar w={48} h={14} />
+              <div className="flex-1 space-y-1.5">
+                <Bar w="45%" h={13} />
+                <Bar w="30%" h={11} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
     </div>
   );
 }
