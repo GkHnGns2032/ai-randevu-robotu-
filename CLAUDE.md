@@ -6,7 +6,7 @@
 > Teknik kurulum (stack, env tablosu, deploy) için: **[README.md](README.md)**.
 > Bu dosya ikisini tekrarlamaz; Claude'un proje üzerinde çalışırken hızla bağlama girmesi için gereken özetleri verir.
 >
-> Son güncelleme: 2026-07-26 (BD-UI-DASHBOARD — panel görev-öncelikli IA §5.10; ayrıca KRİTİK Airtable tarih fix'i §5.9, token katmanı §5.8)
+> Son güncelleme: 2026-07-26 (BD-UI-DENSE — Bugün görünümü yoğunluk yönü; ayrıca §5.10 IA, KRİTİK Airtable tarih fix'i §5.9, token katmanı §5.8)
 
 ---
 
@@ -147,7 +147,11 @@ git reset --hard v1.0-starter        # Faz 1 MVP state
 
 **Neden URL, route değil:** Link paylaşılabilir ve geri tuşu çalışır (route bölmenin faydası), ama veri tek seferde çekilir — `page.tsx` `listAppointments()` + `listStaff()` bir kez koşar ve tüm görünümler aynı veriyi kullanır. Route'a bölünürse her geçişte yeni fetch olurdu.
 
-**Bugün görünümü** ([views/TodayView.tsx](components/dashboard/views/TodayView.tsx)) panelin varsayılanı: sıradaki randevu (geri sayım + Ara/Ertele/Gelmedi) + günün zaman çizelgesi.
+**Bugün görünümü** ([views/TodayView.tsx](components/dashboard/views/TodayView.tsx)) panelin varsayılanı — **"yoğunluk" görsel yönü** (2026-07-26, üç prototip canlı incelenerek seçildi): solda günün akışı, sağda karar rayı (sıradaki, gün özeti, personel doluluk, dikkat).
+
+**Uyarı paneli kuralı:** "Dikkat" bölümü **özetler, listelemez**. Prototipte her kalemi tek tek yazınca ekran dokuz satır "ödeme bekliyor" ile doldu — her şeyi sayan uyarı paneli her zaman dolu olur ve okunmaz hale gelir. Sayı + tutar ver, detayı yanına yaz.
+
+**Mobil sıra ters:** ray üstte, akış altta — özet detaydan önce gelir (`order-first lg:order-last`). Satırlarda süre `sm`, tutar `md` altında gizlenir; dar ekranda isim ve aksiyon önceliklidir.
 
 **Mobil kuralı:** Bu tur öncesi tüm uygulamada 9 responsive utility vardı. Yeni bileşenlerde 375/768/1440 üçlüsü ölçülür; yatay taşma kabul edilmez. Görünüm sekmeleri mobilde 5'li ızgara (ikon üstte) — kaydırma gerektirmez.
 
@@ -204,7 +208,9 @@ GCal create hatası, SMS gönderim hatası — yakalanır, loglanır, randevu Ai
 | BD-UI-SLOT-HOLD | Tamam — smoke test 11/11 geçti, main'e merge edildi | `v1.13.1-slot-hold-baseline` (öncesi) | `BD-UI-SLOT-HOLD` (merge edildi) |
 | BD-UI-TOKEN | Tamam (müşteri yüzeyi token katmanı + tenant marka, §5.8), main'e merge edildi | `v1.13.2-token-baseline` (öncesi) → `v1.14-bd-ui-token` | `BD-UI-TOKEN` (merge edildi) |
 | FIX-AIRTABLE-DATE | **Kritik** — tarih filtresi hiçbir randevuyu bulamıyordu, çift rezervasyon açıktı (§5.9). main'de, **push bekliyor** | → `v1.15-airtable-date-fix` | `fix-airtable-date-filter` (merge edildi) |
-| BD-UI-DASHBOARD | Panel görev-öncelikli IA (5 görünüm) + mobil, §5.10. **Lokal, push bekliyor** | `v1.15.1-dashboard-baseline` (öncesi) | `BD-UI-DASHBOARD` |
+| BD-UI-DASHBOARD | Panel görev-öncelikli IA (5 görünüm) + mobil, §5.10 | `v1.16-dashboard-ia` | merge edildi |
+| BD-UI-A11Y | 19 dokunma hedefi 44px'e, ölü kod temizliği | `v1.17-a11y-touch-targets` | merge edildi |
+| BD-UI-DENSE | Bugün görünümü yoğunluk yönü (§5.10) | `v1.18-dense-today` | `BD-UI-DENSE` |
 | BD4+ | Deferred — bkz §7 |
 
 **Branch akışı kuralı:** Feature/fix → ayrı branch → atomik commit'ler → onay → main merge → tag → push. Branch'ler `--merged main` olunca toplu cleanup (`git branch -d <isim>` + `git push origin --delete <isim>`).
