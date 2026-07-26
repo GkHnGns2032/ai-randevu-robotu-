@@ -86,13 +86,13 @@ export function AppointmentTable({ appointments }: Props) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Ara: isim, telefon, hizmet..."
-          className="flex-1 min-w-[200px] px-3 py-1.5 rounded-lg text-sm"
+          className="flex-1 min-w-[200px] px-3 min-h-[44px] rounded-lg text-sm"
           style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
         />
         <select
           value={dateFilter}
           onChange={(e) => setDateFilter(e.target.value as typeof dateFilter)}
-          className="px-3 py-1.5 rounded-lg text-sm"
+          className="px-3 min-h-[44px] rounded-lg text-sm"
           style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
         >
           <option value="upcoming">Yaklaşan</option>
@@ -103,7 +103,7 @@ export function AppointmentTable({ appointments }: Props) {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-          className="px-3 py-1.5 rounded-lg text-sm"
+          className="px-3 min-h-[44px] rounded-lg text-sm"
           style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
         >
           <option value="all">Tüm Durumlar</option>
@@ -114,7 +114,7 @@ export function AppointmentTable({ appointments }: Props) {
         <a
           href="/api/export"
           download
-          className="ml-auto px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
+          className="ml-auto px-3 min-h-[44px] inline-flex items-center rounded-lg text-sm font-medium flex-shrink-0"
           style={{ background: 'var(--gold)', color: '#fff' }}
         >
           CSV İndir
@@ -211,7 +211,7 @@ export function AppointmentTable({ appointments }: Props) {
                     <div className="flex items-center gap-3">
                       <button
                         onClick={(e) => { e.stopPropagation(); setEditing(a); }}
-                        className="text-xs transition-opacity hover:opacity-70"
+                        className="text-xs transition-opacity hover:opacity-70 inline-flex items-center min-h-[44px] px-1"
                         style={{ color: 'var(--gold)' }}
                       >
                         Düzenle

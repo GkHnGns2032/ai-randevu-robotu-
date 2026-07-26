@@ -370,7 +370,7 @@ function GoalCard({ label, current, goal, onGoalChange, showBorderLeft = true }:
         </p>
         <button
           onClick={() => { setInputVal(String(goal)); setEditing(true); }}
-          className="flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all hover:scale-105 active:scale-95"
+          className="flex items-center gap-1.5 px-2 min-h-[44px] rounded-lg transition-all hover:scale-105 active:scale-95"
           style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)' }}
         >
           <Pencil size={9} style={{ color: 'var(--text-3)' }} />

@@ -116,7 +116,7 @@ export function StaffManager({ initialStaff }: Props) {
       {/* Toggle button — stats always visible */}
       <button
         onClick={() => setListOpen((p) => !p)}
-        className="w-full mb-4 flex items-center justify-between px-4 py-2.5 rounded-xl text-sm transition-colors hover:opacity-80"
+        className="w-full mb-4 flex items-center justify-between px-4 min-h-[44px] rounded-xl text-sm transition-colors hover:opacity-80"
         style={{
           background: 'var(--bg-hover)',
           border: '1px solid var(--border)',

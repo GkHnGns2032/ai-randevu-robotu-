@@ -115,7 +115,7 @@ export function VoiceSummary({ appointments }: Props) {
   return (
     <button
       onClick={speak}
-      className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all duration-200 hover:scale-105 active:scale-95"
+      className="flex items-center gap-2 px-4 min-h-[44px] rounded-xl text-xs font-medium transition-all duration-200 hover:scale-105 active:scale-95"
       style={{
         background: state === 'speaking' ? 'var(--rose)' : 'var(--gold-bg)',
         border: `1px solid ${state === 'speaking' ? 'color-mix(in srgb, var(--rose) 60%, transparent)' : 'var(--border-gold)'}`,

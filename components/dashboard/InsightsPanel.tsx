@@ -192,7 +192,7 @@ export function InsightsPanel() {
           <button
             onClick={load}
             disabled={spinning}
-            className="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-medium transition-opacity hover:opacity-70"
+            className="flex-shrink-0 flex items-center gap-1.5 px-2.5 min-h-[44px] rounded-lg text-[9px] font-medium transition-opacity hover:opacity-70"
             style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-2)', whiteSpace: 'nowrap' }}
             title="Analizi yenile"
           >

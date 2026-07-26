@@ -269,21 +269,21 @@ export function AppointmentCalendar({ appointments }: Props) {
           )}
           <button
             onClick={() => setWeekBase((d) => subWeeks(d, 1))}
-            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+            className="w-11 h-11 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95"
             style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
           >
             <ChevronLeft size={15} />
           </button>
           <button
             onClick={() => setWeekBase(new Date())}
-            className="h-9 px-4 rounded-xl text-xs font-semibold tracking-widest uppercase transition-all hover:scale-105 active:scale-95"
+            className="h-11 px-4 rounded-xl text-xs font-semibold tracking-widest uppercase transition-all hover:scale-105 active:scale-95"
             style={{ background: 'var(--gold-bg)', border: '1px solid var(--border-gold)', color: 'var(--gold)' }}
           >
             Bugün
           </button>
           <button
             onClick={() => setWeekBase((d) => addWeeks(d, 1))}
-            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+            className="w-11 h-11 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95"
             style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
           >
             <ChevronRight size={15} />
