@@ -31,7 +31,7 @@ Bella'da kod değişikliğinden sonra commit/push/merge öncesi **gerçek doğru
 ### Aşama 1: Statik Kontroller (paralel çalıştır)
 
 ```bash
-cd D:/GAI/repos/bella
+cd /Users/gkhngns/Desktop/PROJECTS/GAI/repos/bella
 
 npm run lint
 npx tsc --noEmit
@@ -203,7 +203,7 @@ Dev server background'da kalıyorsa, smoke test bitiminde **Gökhan'a sor** kapa
 
 ## Bella-Özel Bağlam
 
-- **Repo:** `D:/GAI/repos/bella/`
+- **Repo:** `/Users/gkhngns/Desktop/PROJECTS/GAI/repos/bella/`
 - **Dev URL:** `http://localhost:3000`
 - **API base:** `/api/<endpoint>`
 - **Auth:** Clerk (dashboard sayfaları korunur, public chat değil)

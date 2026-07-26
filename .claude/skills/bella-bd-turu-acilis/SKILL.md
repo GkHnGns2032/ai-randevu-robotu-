@@ -92,7 +92,7 @@ Eğer handoff `claude.ai` tarafından yazılmışsa (vault `CLAUDE.md` §9.1: ha
 
 ## Bella-Özel Bağlam
 
-- **Repo:** `D:/GAI/repos/bella/` (Bella AI Randevu Robotu)
+- **Repo:** `/Users/gkhngns/Desktop/PROJECTS/GAI/repos/bella/` (Bella AI Randevu Robotu)
 - **Branch model:** master = canlı (her zaman temiz), feature branch'ler `BD<N>` veya `fix-konu`
 - **Tag konvansiyonu:** `v<MAJOR>.<MINOR>-<konu>` (Bella production seviyesi)
 - **Anchor tag pattern:** her tur öncesi+sonrası

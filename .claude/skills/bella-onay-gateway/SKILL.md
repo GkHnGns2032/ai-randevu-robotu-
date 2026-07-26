@@ -227,7 +227,7 @@ Bu skill'i atlamak başlı başına Kritik hata. Atladıysam:
 
 ## Bella-Özel Bağlam
 
-- **Repo:** `D:/GAI/repos/bella/`
+- **Repo:** `/Users/gkhngns/Desktop/PROJECTS/GAI/repos/bella/`
 - **Production:** `<bella-vercel-proje>.vercel.app` (master branch)
 - **Vercel CLI:** Bella CLAUDE.md'de yasak — sadece dashboard + GitHub push
 - **Detay liste:** vault `operasyon/kurallar/delegation-detay.md` (her ay büyüyen liste)

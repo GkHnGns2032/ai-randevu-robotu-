@@ -167,7 +167,7 @@ Gökhan "şunu hızlıca düzeltsin" derse → hızlı olan kısaltma değil, **
 
 ## Bella-Özel Bağlam
 
-- **Repo:** `D:/GAI/repos/bella/`
+- **Repo:** `/Users/gkhngns/Desktop/PROJECTS/GAI/repos/bella/`
 - **Branch model:** `BD<N>` veya `BD<N>-B<X>` veya `fix-<konu>`
 - **Tag:** `v<M.m+1>-<konu>` (her bug fix sonrası MINOR +1)
 - **Dev server:** `npm run dev` (localhost:3000 default)

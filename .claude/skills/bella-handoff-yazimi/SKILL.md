@@ -28,7 +28,7 @@ Bir Bella oturumu / BD turu kapanırken, **bir sonraki oturum açıldığında "
 
 ## Çıktı 1/3 — Aktif Oturum Handoff (memory)
 
-**Dosya:** `D:/GAI/memory/project_aktif_oturum_handoff.md`
+**Dosya:** `/Users/gkhngns/Desktop/PROJECTS/GAI/memory/project_aktif_oturum_handoff.md`
 
 **Eylem:** Mevcut entry'yi **overwrite** et (geçici entry, sonraki turda silinir/güncellenir). MEMORY.md index satırı da güncelle.
 
@@ -104,7 +104,7 @@ Eğer working tree kirli ise dosya isimleri **mutlaka** listelenir (önceki kapa
 
 ## Çıktı 2/3 — Günlük Log (vault)
 
-**Dosya:** `D:/GAI/vault/operasyon/retro/gunluk.md`
+**Dosya:** `/Users/gkhngns/Desktop/PROJECTS/GAI/vault/operasyon/retro/gunluk.md`
 
 **Eylem:** **Append** (silme yok, eski kayıtlar dokunulmaz). Tarih bölümü yoksa yarat.
 
@@ -122,7 +122,7 @@ Eğer working tree kirli ise dosya isimleri **mutlaka** listelenir (önceki kapa
 
 ```markdown
 ## 2026-05-14
-- M9 workspace migration tamamlandı, 4 dağınık kök D:/GAI/'ye birleşti. Vault private repo (gunesai-vault). Faz A + B0 + B1 tamam, B2 başlangıç.
+- M9 workspace migration tamamlandı, 4 dağınık kök /Users/gkhngns/Desktop/PROJECTS/GAI/'ye birleşti. Vault private repo (gunesai-vault). Faz A + B0 + B1 tamam, B2 başlangıç.
 - Bella main clean, 3 untracked doc dosyası bekliyor (BD-AGENT-SKILL-ONERILERI + tavsiye-developer-skilller/).
 
 **Yarın ilk iş:** B2 — 9 Bella+vault skill yazımı, ilk skill bella-bd-turu-acilis.
@@ -148,7 +148,7 @@ Hata yoksa: "**HL kayıt yok** — bu turda anlamlı/kritik hata gözlemlenmedi.
 
 ## Çıktı 4/4 — Gün Sonu Özet (vault, rolling buffer)
 
-**Dosya:** `D:/GAI/vault/operasyon/retro/gun-sonu.md`
+**Dosya:** `/Users/gkhngns/Desktop/PROJECTS/GAI/vault/operasyon/retro/gun-sonu.md`
 
 **Eylem:** **Read-modify-write** (3 günlük rolling buffer). Yeni gün eklenir, dosyada zaten 3 gün varsa **en eski blok silinir**.
 
@@ -170,14 +170,14 @@ Hata yoksa: "**HL kayıt yok** — bu turda anlamlı/kritik hata gözlemlenmedi.
 ```markdown
 ## 2026-05-14 (Bugün)
 
-- **Workspace migration:** 4 dağınık kök D:/GAI/'ye federe edildi, vault private GitHub'a alındı.
+- **Workspace migration:** 4 dağınık kök /Users/gkhngns/Desktop/PROJECTS/GAI/'ye federe edildi, vault private GitHub'a alındı.
 - **9 skill yazımı (BD-INFRA-B2):** 5 Bella + 4 vault skill yazıldı, atomik commit'lendi, main'e merge.
 - **Skill discovery fix:** Workspace seviyesi .claude/skills/ kuruldu (3 katman discovery), Mac geçiş script'i eklendi.
 ```
 
 **Rolling logic — uygulama adımları:**
 
-1. **Mevcut dosyayı oku:** `D:/GAI/vault/operasyon/retro/gun-sonu.md`
+1. **Mevcut dosyayı oku:** `/Users/gkhngns/Desktop/PROJECTS/GAI/vault/operasyon/retro/gun-sonu.md`
 2. **Mevcut gün bloklarını say:** `## YYYY-MM-DD` regex ile (header bölüm dışında — frontmatter/açıklama atla)
 3. **Bugünün başlıklarını üret:** Turun ana iş kalemlerinden 3-6 madde, her biri `**Başlık:** cümle` formatında
 4. **Karar:**

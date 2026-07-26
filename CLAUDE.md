@@ -1,8 +1,8 @@
 # CLAUDE.md — Bella Repo Rehberi
 
 > Bu dosya Claude Code'un her oturumda otomatik yüklediği proje rehberidir.
-> Stratejik anayasa için: **`D:/GAI/vault/CLAUDE.md`** (vault — vizyon, ürün katalog, delegation, KVKK).
-> Workspace anayasa için: **`D:/GAI/CLAUDE.md`** (repo haritası, çalışma kuralları özeti).
+> Stratejik anayasa için: **`/Users/gkhngns/Desktop/PROJECTS/GAI/vault/CLAUDE.md`** (vault — vizyon, ürün katalog, delegation, KVKK).
+> Workspace anayasa için: **`/Users/gkhngns/Desktop/PROJECTS/GAI/CLAUDE.md`** (repo haritası, çalışma kuralları özeti).
 > Teknik kurulum (stack, env tablosu, deploy) için: **[README.md](README.md)**.
 > Bu dosya ikisini tekrarlamaz; Claude'un proje üzerinde çalışırken hızla bağlama girmesi için gereken özetleri verir.
 >
@@ -251,12 +251,12 @@ Detay: vault'taki `operasyon/kurallar/delegation-detay.md`.
 
 ## 10. Hata Logu Pratiği
 
-Hatalar + pattern'ler vault'taki `D:/GAI/vault/operasyon/hata-logu.md` dosyasına eklenir (HL-N görev koduyla). Format:
+Hatalar + pattern'ler vault'taki `/Users/gkhngns/Desktop/PROJECTS/GAI/vault/operasyon/hata-logu.md` dosyasına eklenir (HL-N görev koduyla). Format:
 ```
 - **YYYY-MM-DD** — konu — sebep — çözüm
 ```
 
-**Commit politikası (2026-05-14 sonrası):** Vault artık git'te (`gunesai-vault` GitHub private repo). Hata-logu **append-only** kuralı korunur — eski kayıtlar silinmez, sadece eklenir. Haftalık retro turunda biriken HL kayıtları `docs(hata-logu): hafta NN HL kayıtları` formatında toplu commit'lenir. Vault git akışı detayı: `D:/GAI/vault/operasyon/kurallar/vault-bakim-rituelleri.md` §4.
+**Commit politikası (2026-05-14 sonrası):** Vault artık git'te (`gunesai-vault` GitHub private repo). Hata-logu **append-only** kuralı korunur — eski kayıtlar silinmez, sadece eklenir. Haftalık retro turunda biriken HL kayıtları `docs(hata-logu): hafta NN HL kayıtları` formatında toplu commit'lenir. Vault git akışı detayı: `/Users/gkhngns/Desktop/PROJECTS/GAI/vault/operasyon/kurallar/vault-bakim-rituelleri.md` §4.
 
 ## 11. CLAUDE.md Güncelleme Tetikleyicileri
 
@@ -281,10 +281,10 @@ Bu dosya yaşayan dokümandır. Şu durumlarda Claude güncelleme önerir (**sor
 - **[docs/SISTEM-REHBERI.md](docs/SISTEM-REHBERI.md)** — sistem rehberi
 - **[docs/MUSTERI-MULAKAT-SORULARI.md](docs/MUSTERI-MULAKAT-SORULARI.md)** — yeni müşteri keşif soruları
 - **[docs/superpowers/plans/](docs/superpowers/plans/)** — Faz planları + handoff'lar (özellikle Faz 5.5 ve roadmap)
-- **`D:/GAI/vault/CLAUDE.md`** — vault stratejik anayasa (vizyon, ürün katalog, çalışma felsefesi)
-- **`D:/GAI/vault/operasyon/kurallar/`** — detay kural modülleri (git-akisi, delegation-detay, hata-politikasi, KVKK, dil-politikasi, isimlendirme)
-- **`D:/GAI/CLAUDE.md`** — workspace anayasa (repo haritası, bağlam önceliği)
-- **`D:/GAI/MEMORY.md`** + `D:/GAI/memory/` — workspace operasyonel memory
+- **`/Users/gkhngns/Desktop/PROJECTS/GAI/vault/CLAUDE.md`** — vault stratejik anayasa (vizyon, ürün katalog, çalışma felsefesi)
+- **`/Users/gkhngns/Desktop/PROJECTS/GAI/vault/operasyon/kurallar/`** — detay kural modülleri (git-akisi, delegation-detay, hata-politikasi, KVKK, dil-politikasi, isimlendirme)
+- **`/Users/gkhngns/Desktop/PROJECTS/GAI/CLAUDE.md`** — workspace anayasa (repo haritası, bağlam önceliği)
+- **`/Users/gkhngns/Desktop/PROJECTS/GAI/MEMORY.md`** + `/Users/gkhngns/Desktop/PROJECTS/GAI/memory/` — workspace operasyonel memory
 
 ---
 
