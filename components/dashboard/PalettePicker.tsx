@@ -45,7 +45,7 @@ export function PalettePicker() {
       <button
         onClick={() => setOpen((o) => !o)}
         title="Renk paleti seç"
-        className="flex items-center gap-2 px-3 h-10 rounded-xl transition-all hover:scale-105 active:scale-95"
+        className="flex items-center gap-2 px-3 h-11 rounded-xl transition-all hover:scale-105 active:scale-95"
         style={{
           background: 'var(--bg-hover)',
           border: '1px solid var(--border)',
