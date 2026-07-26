@@ -106,14 +106,80 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   CONSUMER TOKENS — müşteriye bakan yüzey (landing + chat)
+   ───────────────────────────────────────────────────────────────
+   Yukarıdaki 8 palet operatör panelinindir ([data-theme] ile seçilir).
+   Bu blok ise SALONUN MÜŞTERİSİNİN gördüğü yüzeydir ve tenant'a göre
+   değişir: config/clients/<slug>.ts içindeki `brand` bloğu app/layout.tsx
+   tarafından <html> üzerine inline CSS değişkeni olarak basılır ve
+   buradaki varsayılanları ezer.
+
+   Buradaki değerler Bella'nın mevcut renkleridir — bilerek birebir aynı.
+   Yeni tenant eklerken bu dosyaya DOKUNMA, kendi config'ine brand yaz.
+═══════════════════════════════════════════════════════════════ */
+:root {
+  /* Marka */
+  --c-brand: #7B5EA7;
+  --c-brand-strong: #6B3FA0;
+  --c-brand-ink: #3A2855;
+  --c-brand-soft: #EBE2F5;
+  --c-brand-tint: #DDD0F0;
+  --c-brand-tint-strong: #C9ADE0;
+  --c-brand-muted: #6B5080;
+  --c-brand-subtle: #8B7B95;
+  --c-brand-rgb: 123, 94, 167;
+
+  /* Yüzeyler */
+  --c-page-from: #FDFCF9;
+  --c-page-to: #F5EEE8;
+  --c-surface: #FDFCF9;
+  --c-surface-raised: #FFFFFF;
+  --c-border: #EDE4DA;
+  --c-border-soft: #F0E8DF;
+
+  /* Metin */
+  --c-heading: #2A2018;
+  --c-text-muted: #8A7A70;
+  --c-text-chip: #5A4A40;
+  --c-text-faint: #C8BAB0;
+
+  /* Durum */
+  --c-online: #9EC9A8;
+  --c-dots: #C8B8D0;
+
+  /* Asistan avatarı */
+  --c-avatar-from: #F0E8F5;
+  --c-avatar-to: #F7E2EC;
+  --c-avatar-border: #EDD8E8;
+
+  /* Hızlı yanıt çipleri */
+  --c-chip-bg: #FAF8FE;
+  --c-chip-border: #D8CEEA;
+  --c-chip-bg-hover: #F0EAF8;
+  --c-chip-border-hover: #B8A0E0;
+
+  /* Konfeti (ChatInterface canvas'ı bu 4'ünü runtime'da okur) */
+  --c-confetti-1: #EBE2F5;
+  --c-confetti-2: #F7E2EC;
+  --c-confetti-3: #C4AEE0;
+  --c-confetti-4: #FFFFFF;
+
+  /* Tipografi */
+  --c-font-serif: 'Cormorant Garamond', serif;
+  --c-font-sans: 'DM Sans', sans-serif;
+}
+
+/* ═══════════════════════════════════════════════════════════════
    BASE
 ═══════════════════════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; }
 
 body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
-  color: var(--text-1);
+  font-family: var(--c-font-sans);
+  /* --bg yalnız [data-theme] altında (panel) tanımlı; public yüzeyde
+     tenant sayfa rengine düşer, böylece tanımsız değişken kalmaz */
+  background: var(--bg, var(--c-page-from));
+  color: var(--text-1, var(--c-brand-ink));
   -webkit-font-smoothing: antialiased;
 }
 
@@ -163,17 +229,17 @@ body {
 .success-bubble { animation: success-pop 500ms cubic-bezier(0.34, 1.56, 0.64, 1) both !important; }
 
 .quick-reply-chip {
-  background: #FAF8FE;
-  border: 1px solid #D8CEEA;
+  background: var(--c-chip-bg);
+  border: 1px solid var(--c-chip-border);
   transition: background 200ms ease, border-color 200ms ease,
               transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1),
               box-shadow 200ms ease;
 }
 .quick-reply-chip:not(:disabled):hover {
-  background: #F0EAF8;
-  border-color: #B8A0E0;
+  background: var(--c-chip-bg-hover);
+  border-color: var(--c-chip-border-hover);
   transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(123, 94, 167, 0.18);
+  box-shadow: 0 6px 16px rgba(var(--c-brand-rgb), 0.18);
 }
 .quick-reply-chip:not(:disabled):active {
   transform: translateY(0) scale(0.96);
