@@ -6,7 +6,7 @@
 > Teknik kurulum (stack, env tablosu, deploy) için: **[README.md](README.md)**.
 > Bu dosya ikisini tekrarlamaz; Claude'un proje üzerinde çalışırken hızla bağlama girmesi için gereken özetleri verir.
 >
-> Son güncelleme: 2026-07-26 (BD-UI-TOKEN — müşteri yüzeyi tenant token katmanı, next/font geçişi, panel FOUC fix; §5.8 eklendi)
+> Son güncelleme: 2026-07-26 (KRİTİK: Airtable tarih filtresi fix'i §5.9 — çift rezervasyon koruması tümüyle ölüydü; ayrıca BD-UI-TOKEN token katmanı §5.8, slot-hold smoke test 11/11)
 
 ---
 
@@ -47,6 +47,13 @@ npm run build    # Production build (deploy öncesi sanity check)
 npm run start    # Production server (build sonrası)
 npm run lint     # ESLint (next lint)
 npx tsc --noEmit # Type check (lint dışı, manuel)
+
+# Slot/çakışma regresyon testi (T1-T5 salt okunur; T6 gerekirse geçici kayıt
+# açıp finally'de kalıcı siler). Availability veya airtable.ts değişince koş.
+npx tsx scripts/smoke-slot-hold.mts
+
+# Airtable tarih filtresi teşhisi (tamamen salt okunur)
+npx tsx scripts/diag-airtable-date.mts
 ```
 
 Geri dönüş (rollback):
@@ -132,6 +139,18 @@ git reset --hard v1.0-starter        # Faz 1 MVP state
 
 [app/api/chat/route.ts:274-316](app/api/chat/route.ts) — UTC+3 sabit (Türkiye 2016'dan beri DST yok). Her chat çağrısında "BUGÜN BAĞLAMI" bloğu system prompt'a inject ediliyor (göreceli tarih halüsinasyonunu önlemek için).
 
+### 5.9 Airtable Tarih Filtresi — `DATESTR()` ZORUNLU (2026-07-26)
+
+**Kural:** Airtable formülünde tarih karşılaştırırken **asla** `{date} = "YYYY-MM-DD"` yazma. `DATESTR({date}) = "YYYY-MM-DD"` kullan.
+
+**Neden:** `date` alanı Airtable'da **Date tipinde**. REST API kaydı okurken değeri string döndürür (`"2026-05-26"`), bu yüzden kod doğru görünür — ama formül motorunda alan bir tarih nesnesidir ve string ile eşitlik **hiçbir zaman tutmaz**. Sorgu hata vermez, sessizce **boş dizi** döner.
+
+**Bunun maliyeti:** [getAppointmentsByDate](lib/airtable.ts) bu yüzden hiçbir randevu bulamıyordu → `isSlotStillAvailable` hiç çakışma görmüyor, `getStaffAwareSlots` her slotu boş sanıyor → **aynı saate sınırsız randevu alınabiliyordu**. GCal auth da ölü olduğu için availability zaten bu yola düşüyordu, yani koruma tümüyle devre dışıydı. Handoff'ta aylardır "14:00 dolu ama seçilebiliyor" diye duran bulgunun asıl sebebi buydu; önceki turlarda komşu davranışlar düzeltilmiş ama okuma katmanı bozuk kaldığı için bulgu kapanmamıştı.
+
+**Etkilenmeyen:** `listAppointments` — `IS_AFTER`/`IS_BEFORE` gerçek tarih fonksiyonları, string argümanı tarihe çevirir. Panel bu yüzden randevuları görüyordu; asimetri teşhisi geciktiren şeydi.
+
+**Regresyon testi:** `npx tsx scripts/smoke-slot-hold.mts` — T6 tam olarak bunu yakalar.
+
 ### 5.8 Müşteri Yüzeyi Token Katmanı — Tenant Markası (BD-UI-TOKEN, 2026-07-26)
 
 **Sorun:** Panelde 460 `var(--*)` kullanımı vardı, müşteriye bakan yüzeyde (`app/page.tsx` + `components/chat/`) **sıfır** — 68 hex elle gömülüydü. Multi-tenant altyapısı vardı ama yeni müşteri Bella'nın mor-kremini almak zorundaydı.
@@ -166,7 +185,9 @@ GCal create hatası, SMS gönderim hatası — yakalanır, loglanır, randevu Ai
 | BD-INFRA-SDK | Tamam (Anthropic SDK `^0.33.1` → `^0.96.0` prod canlı 2026-05-16, 17 ay açık kapandı) | `v1.8.1-bd-infra-sdk-baseline` (öncesi) → `v1.9-bd-infra-sdk-v096` (sonrası) | `bd-infra-sdk-upgrade` (merge sonrası lokal+remote duruyor, toplu cleanup turunda silinir) |
 | BD-INFRA-MT-LOADER | Tamam (multi-tenant Yol A iskelet loader prod 2026-05-17, single-tenant tasarım Aşama 0-1 Yol A'ya geçti) | `v1.9.2-mt-loader-baseline` (öncesi) → `v1.10-bd-infra-mt-loader` (sonrası) | `bd-infra-mt-loader` (merge sonrası toplu cleanup turunda silinir) |
 | BD-INFRA-3-CRON-SECRET | Tamam (Vercel cron auth pattern `?secret=` query → `Authorization: Bearer` header geçişi + `vercel.json` crons array, prod canlı 2026-05-19; BD-INFRA-3 toplu askıları tümüyle kapandı) | `v1.11.1-cron-secret-baseline` (öncesi) → `v1.12-bd-infra-3-cron-secret` (sonrası) | main (feature branch'siz) |
-| BD-UI-TOKEN | **Lokal tamam, merge/push bekliyor** (müşteri yüzeyi token katmanı + tenant marka, §5.8) | `v1.13.2-token-baseline` (öncesi) → `v1.14-bd-ui-token` (sonrası) | `BD-UI-TOKEN` (BD-UI-SLOT-HOLD üstünden dallandı) |
+| BD-UI-SLOT-HOLD | Tamam — smoke test 11/11 geçti, main'e merge edildi | `v1.13.1-slot-hold-baseline` (öncesi) | `BD-UI-SLOT-HOLD` (merge edildi) |
+| BD-UI-TOKEN | Tamam (müşteri yüzeyi token katmanı + tenant marka, §5.8), main'e merge edildi | `v1.13.2-token-baseline` (öncesi) → `v1.14-bd-ui-token` | `BD-UI-TOKEN` (merge edildi) |
+| FIX-AIRTABLE-DATE | **Kritik** — tarih filtresi hiçbir randevuyu bulamıyordu, çift rezervasyon açıktı (§5.9). main'de, **push bekliyor** | → `v1.15-airtable-date-fix` | `fix-airtable-date-filter` (merge edildi) |
 | BD4+ | Deferred — bkz §7 |
 
 **Branch akışı kuralı:** Feature/fix → ayrı branch → atomik commit'ler → onay → main merge → tag → push. Branch'ler `--merged main` olunca toplu cleanup (`git branch -d <isim>` + `git push origin --delete <isim>`).
