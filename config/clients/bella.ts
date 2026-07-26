@@ -68,8 +68,9 @@ export const CLIENT_CONFIG = {
     confetti3: '#C4AEE0',
     confetti4: '#FFFFFF',
 
-    fontSerif: "'Cormorant Garamond', serif",
-    fontSans: "'DM Sans', sans-serif",
+    // fontSerif / fontSans burada BİLEREK yok: font yüklemesi next/font ile
+    // build-time yapılıyor (app/layout.tsx). Font değiştirmek isteyen tenant
+    // oraya da bir satır eklemeli — yalnız bu dosyadan değiştirilemez.
 
     dashboardTheme: 'obsidian',    // panelin açılış paleti
   },

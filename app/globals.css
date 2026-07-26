@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
+/* Fontlar app/layout.tsx'te next/font ile yükleniyor (self-host + preload).
+   Buradaki @import zincirleme istek yaratıyordu: CSS → Google CSS → woff2. */
 
 @tailwind base;
 @tailwind components;
@@ -164,9 +165,14 @@
   --c-confetti-3: #C4AEE0;
   --c-confetti-4: #FFFFFF;
 
-  /* Tipografi */
-  --c-font-serif: 'Cormorant Garamond', serif;
-  --c-font-sans: 'DM Sans', sans-serif;
+  /* Tipografi — --font-* next/font tarafından layout.tsx'te sağlanır.
+     Tenant fontu değiştirmek isterse layout.tsx'e de bir next/font satırı
+     eklenmeli: font yüklemesi build-time, sadece config'den değiştirilemez. */
+  --c-font-serif: var(--font-serif), 'Cormorant Garamond', serif;
+  --c-font-sans: var(--font-sans), 'DM Sans', sans-serif;
+  /* Sistem mono yığını — indirme maliyeti yok, Courier New'den çok daha iyi */
+  --c-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+                 'Liberation Mono', monospace;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -188,13 +194,25 @@ body {
   min-height: 100vh;
 }
 
-.theme-transition, .theme-transition * {
+/* Palet geçiş animasyonu — YALNIZ palet değişirken açık.
+   Önceden `.theme-transition *` kalıcıydı: paneldeki her düğüm (recharts
+   SVG'leri, randevu tablosu satırları dahil) sürekli 5 property'de transition
+   taşıyor ve `!important` ile bileşenlerin kendi geçişlerini de eziyordu.
+   ThemeProvider.setTheme artık <html>'e .theme-switching ekleyip 400ms sonra
+   kaldırıyor. */
+html.theme-switching .theme-root,
+html.theme-switching .theme-root * {
   transition:
     background-color 0.35s ease,
     border-color 0.35s ease,
     color 0.35s ease,
     box-shadow 0.35s ease,
     opacity 0.35s ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-switching .theme-root,
+  html.theme-switching .theme-root * { transition: none !important; }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -218,6 +236,10 @@ body {
 @keyframes ripple-out  { from{transform:scale(0);opacity:0.35} to{transform:scale(4);opacity:0} }
 @keyframes success-pop { 0%{transform:scale(0.92)} 55%{transform:scale(1.04)} 100%{transform:scale(1)} }
 @keyframes flash-white { 0%{opacity:0} 25%{opacity:0.18} 100%{opacity:0} }
+/* Mikrofon dinleme nabzı. ChatInput "pulse" adlı bir keyframe çağırıyordu
+   ama böyle bir tanım yoktu (yalnız pulse-dot vardı) — animasyon sessizce
+   hiç çalışmıyordu. */
+@keyframes mic-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
 
 /* ═══════════════════════════════════════════════════════════════
    UTILITY

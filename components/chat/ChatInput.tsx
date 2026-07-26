@@ -105,7 +105,7 @@ export function ChatInput({ onSend, disabled }: Props) {
             background: micState === 'listening' ? 'var(--c-brand)' : 'var(--c-chip-bg)',
             color: micState === 'listening' ? 'var(--c-surface-raised)' : 'var(--c-brand-muted)',
             border: '1px solid var(--c-chip-border)',
-            animation: micState === 'listening' ? 'pulse 1.5s ease-in-out infinite' : 'none',
+            animation: micState === 'listening' ? 'mic-pulse 1.5s ease-in-out infinite' : 'none',
             boxShadow: micState === 'listening' ? '0 0 0 4px rgba(123,94,167,0.18)' : 'none',
           }}
         >

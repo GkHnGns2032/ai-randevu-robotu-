@@ -1,8 +1,28 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { ClerkProvider } from '@clerk/nextjs';
+import { Cormorant_Garamond, DM_Sans } from 'next/font/google';
 import { CLIENT_CONFIG } from '@/config/client';
 import { brandStyle, defaultDashboardTheme, DASHBOARD_THEMES } from '@/lib/brand';
+
+// Fontlar next/font ile: globals.css'teki @import zincirleme istek yaratiyordu
+// (CSS -> Google CSS -> woff2). next/font dosyalari build'de self-host eder,
+// preload + font-display:swap ekler, üçüncü taraf isteği kalmaz.
+// latin-ext ZORUNLU — Türkçe ş/ğ/ı/İ/ç/ö/ü o subset'te.
+const fontSerif = Cormorant_Garamond({
+  subsets: ['latin', 'latin-ext'],
+  weight: ['300', '400', '500', '600'],
+  style: ['normal', 'italic'],
+  display: 'swap',
+  variable: '--font-serif',
+});
+
+const fontSans = DM_Sans({
+  subsets: ['latin', 'latin-ext'],
+  weight: ['300', '400', '500', '600'],
+  display: 'swap',
+  variable: '--font-sans',
+});
 
 export const metadata: Metadata = {
   title: `${CLIENT_CONFIG.businessName} — Online Randevu`,
@@ -26,7 +46,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ClerkProvider afterSignOutUrl="/">
       {/* suppressHydrationWarning: data-theme'i yukarıdaki script hydration
           öncesi değiştirebilir — beklenen davranış, uyarı bastırılır. */}
-      <html lang="tr" data-theme={initialTheme} style={brandStyle()} suppressHydrationWarning>
+      <html
+        lang="tr"
+        data-theme={initialTheme}
+        className={`${fontSerif.variable} ${fontSans.variable}`}
+        style={brandStyle()}
+        suppressHydrationWarning
+      >
         <head>
           <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
         </head>

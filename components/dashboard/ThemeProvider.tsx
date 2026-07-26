@@ -22,8 +22,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setTheme = (t: ThemeName) => {
+    // Geçiş animasyonunu yalnız palet değişimi süresince aç (bkz. globals.css
+    // .theme-switching) — kalıcı transition tüm paneli yavaşlatıyordu.
+    const root = document.documentElement;
+    root.classList.add('theme-switching');
+    window.setTimeout(() => root.classList.remove('theme-switching'), 400);
+
     setThemeState(t);
-    document.documentElement.setAttribute('data-theme', t);
+    root.setAttribute('data-theme', t);
     localStorage.setItem('bella-theme', t);
   };
 
