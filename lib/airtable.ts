@@ -94,9 +94,18 @@ export async function listAppointments(options?: {
 }
 
 export async function getAppointmentsByDate(date: string): Promise<Appointment[]> {
+  // DATESTR() ZORUNLU — `{date} = "2026-05-26"` YAZMA.
+  // Airtable'daki `date` alanı Date tipinde. API kaydı okurken değeri string
+  // olarak döndürür ("2026-05-26"), ama FORMÜL içinde tarih nesnesidir; string
+  // ile eşitlik karşılaştırması hiçbir zaman tutmaz ve fonksiyon sessizce boş
+  // dizi döner. Bu, çakışma tespitinin tamamını öldürüyordu: isSlotStillAvailable
+  // hiç çakışma bulamıyor, getStaffAwareSlots her slotu boş sanıyor → aynı saate
+  // sınırsız randevu alınabiliyordu.
+  // Canlı base'de ölçüldü: {date}="..." → 0 kayıt, DATESTR({date})="..." → 3 kayıt.
+  // Regresyon testi: scripts/smoke-slot-hold.mts (T6).
   const records = await table
     .select({
-      filterByFormula: `{date} = "${escapeFormulaString(date)}"`,
+      filterByFormula: `DATESTR({date}) = "${escapeFormulaString(date)}"`,
       sort: [{ field: 'time', direction: 'asc' }],
     })
     .all();
