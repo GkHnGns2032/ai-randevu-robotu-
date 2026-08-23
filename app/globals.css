@@ -136,12 +136,10 @@
   margin-left: 1.25rem; margin-right: 1.25rem;
 }
 
-/* Negatif kenar boşluğu bu dilde TAŞIRIYOR. Tablo sarmalayıcısı `-mx-6` ile
-   kapsayıcının dışına çıkıyordu; Endeks'te kapsayıcı dolgusu değiştiği için
-   ilk sütun kırpılıyor ve başlık "ÜŞTERİ" diye okunuyordu. */
-:is([data-theme="endeks"], [data-theme="endeks-gece"]) .-mx-6 {
-  margin-left: 0 !important; margin-right: 0 !important;
-}
+/* Not: `-mx-6` kırpılması BU TEMAYA ÖZEL DEĞİLDİ — her temada vardı ve kökü
+   `CustomerList` içinde düzeltildi (Panel bu görünümde `flush`, yani negatif
+   kenar boşluğunun iptal edeceği bir dolgu yok). Buradaki tema-özel yama
+   kaldırıldı; kalanlar yalnız Endeks hizalaması içindir. */
 :is([data-theme="endeks"], [data-theme="endeks-gece"]) table { width: 100%; }
 :is([data-theme="endeks"], [data-theme="endeks-gece"]) th:first-child,
 :is([data-theme="endeks"], [data-theme="endeks-gece"]) td:first-child { padding-left: 0 !important; }

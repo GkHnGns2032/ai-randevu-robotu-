@@ -336,14 +336,14 @@ export function CustomerList({ appointments }: Props) {
 
       {/* Table */}
       {listOpen && (
-      <div className="overflow-x-auto -mx-6">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead style={{ position: 'sticky', top: 0, background: 'color-mix(in srgb, var(--gold) 7%, var(--bg-card))', zIndex: 10 }}>
             <tr style={{ borderBottom: '1.5px solid color-mix(in srgb, var(--gold) 35%, transparent)' }}>
               {[
                 { key: 'name' as SortKey, label: 'Müşteri' },
                 { key: 'totalVisits' as SortKey, label: 'Ziyaret' },
-                { key: 'totalSpent' as SortKey, label: 'Harcama' },
+                { key: 'totalSpent' as SortKey, label: 'Kazandırdığı' },
                 { key: 'avgPerVisit' as SortKey, label: 'Ziyaret Başına' },
                 { key: 'lastVisit' as SortKey, label: 'Son Ziyaret' },
               ].map(({ key, label }, idx) => (
@@ -487,9 +487,45 @@ export function CustomerList({ appointments }: Props) {
                   {isExpanded && (
                     <tr>
                       <td colSpan={6} style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-hover)' }}>
-                        <div className="px-4 pb-4">
+                        <div className="px-4 pb-4 pt-3">
+                          {/* NET ÖZET — tıklandığında ilk görülen şey "bu müşteri bana ne
+                              kazandırdı" olmalı; randevu dökümü onun altında kalır. */}
+                          <div className="flex flex-wrap items-end gap-x-8 gap-y-3 mb-4 pb-3" style={{ borderBottom: '1px solid var(--border)' }}>
+                            <div>
+                              <p className="text-[11px] tracking-[0.14em] uppercase mb-0.5" style={{ color: 'var(--text-3)' }}>Toplam kazandırdığı</p>
+                              <p className="tabular-nums" style={{ color: 'var(--gold)', fontFamily: 'var(--c-font-serif)', fontSize: '1.7rem', lineHeight: 1.1 }}>
+                                ₺{c.totalSpent.toLocaleString('tr-TR')}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[11px] tracking-[0.14em] uppercase mb-0.5" style={{ color: 'var(--text-3)' }}>Ziyaret başına</p>
+                              <p className="tabular-nums" style={{ color: 'var(--text-1)', fontFamily: 'var(--c-font-serif)', fontSize: '1.35rem', lineHeight: 1.1 }}>
+                                {c.avgPerVisit > 0 ? `₺${c.avgPerVisit.toLocaleString('tr-TR')}` : '—'}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[11px] tracking-[0.14em] uppercase mb-0.5" style={{ color: 'var(--text-3)' }}>Son 12 ay</p>
+                              <p className="tabular-nums" style={{ color: 'var(--text-1)', fontFamily: 'var(--c-font-serif)', fontSize: '1.35rem', lineHeight: 1.1 }}>
+                                ₺{c.spent12m.toLocaleString('tr-TR')} <span className="text-xs" style={{ color: 'var(--text-3)', fontFamily: 'inherit' }}>· {c.visits12m} ziyaret</span>
+                              </p>
+                            </div>
+                            {c.noShowCount > 0 && (
+                              <div>
+                                <p className="text-[11px] tracking-[0.14em] uppercase mb-0.5" style={{ color: 'var(--text-3)' }}>Gelmediği</p>
+                                <p className="tabular-nums" style={{ color: 'var(--rose)', fontFamily: 'var(--c-font-serif)', fontSize: '1.35rem', lineHeight: 1.1 }}>
+                                  {c.noShowCount} randevu
+                                </p>
+                              </div>
+                            )}
+                            {c.estimatedCount > 0 && (
+                              <p className="text-[11px] w-full" style={{ color: 'var(--text-3)' }}>
+                                {c.estimatedCount} randevuda ödeme kaydı yok — o tutarlar liste fiyatından hesaplandı.
+                              </p>
+                            )}
+                          </div>
+
                           {/* Randevu Geçmişi */}
-                          <p className="text-[10px] tracking-[0.16em] uppercase mb-2" style={{ color: 'var(--text-3)' }}>
+                          <p className="text-[11px] tracking-[0.16em] uppercase mb-2" style={{ color: 'var(--text-3)' }}>
                             Randevu Geçmişi
                           </p>
                           <div className="space-y-1.5 mb-4">
@@ -503,14 +539,14 @@ export function CustomerList({ appointments }: Props) {
                                 >
                                   <div className="flex items-center gap-3">
                                     <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: SVC_COLOR[a.service] ?? 'var(--gold)' }} />
-                                    <span className="text-xs font-medium" style={{ color: 'var(--text-1)' }}>{a.service}</span>
+                                    <span className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>{a.service}</span>
                                     <span className="text-xs" style={{ color: 'var(--text-3)' }}>
                                       {a.date ? format(parseISO(a.date), 'd MMMM yyyy', { locale: tr }) : '—'} · {a.time}
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-3">
                                     <span className="text-xs tabular-nums" style={{ color: 'var(--text-2)' }}>
-                                      ₺{SERVICE_PRICES[a.service]?.toLocaleString('tr-TR') ?? '—'}
+                                      ₺{appointmentValue(a).value.toLocaleString('tr-TR')}
                                     </span>
                                     <span
                                       className="text-[10px] px-2 py-0.5 rounded-full"
