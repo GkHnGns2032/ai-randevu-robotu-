@@ -2,6 +2,45 @@
 
 > En yeni kayıt en üstte. Kanonik şema: vault `GG_AI OS/Systems/Oturum Kapanış Şeması.md`.
 
+## bella — 2026-08-24 (oturum: saha turu öncesi demo tahkimi — takvim boşluğu + Airtable temizliği)
+
+**Ne yapıldı:** Haftalık takvimde Per/Cum/Cts sütunları boştu — `YAKLASAN` yalnız `0/1/2` gün
+farkını üretiyor, geçmiş ziyaretlerin en yenisi 10 gün önce. Bugün Pazartesi olduğu için görünen
+pencere tam `+0..+5` idi ve üç sütun hiç doğmuyordu. `+3/+4/+5`'e 16 randevu eklendi (4·5·7,
+yoğunluk cumartesiye artar). Ayrıca Airtable'da dün geceden kalma iki test kaydı silindi
+(`TEST Silinecek Kayit` · `Mason Greenwood`) — tablo 8→6, kalanların hepsi Mayıs-Haziran tohumu.
+
+**Kararlar & neden:**
+- Eklenen kayıtlar **ileri tarihli ve TUTARSIZ**. Gerekçe: `CustomerList.tsx:95` ciroyu ve "tahmin
+  payı"nı yalnız geçmiş randevulardan sayıyor (`!isAfter(date, today)`), dolayısıyla gelecek
+  kayıtlar hesabın dışında kalır ve kümenin tek amacı olan Elif (2 ziyaret / ₺30.000) ↔ Merve
+  (11 ziyaret / ₺10.350) karşıtlığı sulanmaz. Ekranda doğrulandı, çıkarımla bırakılmadı.
+- **Elif Şahin'e yeni ziyaret EKLENMEDİ** — seyrek gelmesi onun hikâyesinin kendisi.
+- Listedeki "%12 tahmin payı" uyarısı bu turdan gelmiyor; bugünün akşam randevularından geliyor ve
+  `demo-data.ts` yorumuna göre bilinçli.
+- Dev sunucusu tekilleştirildi: dün geceden kalma ikinci bir örnek 3000'i tutuyordu, aynı ağaca
+  bakan iki sunucu vardı. İkisi durduruldu, tek sunucu **3000**'de (devir notundaki adres).
+
+**Durum:** tsc temiz (`npx tsc --noEmit` çıkış 0) · test — · build — · commit ⚠ YOK
+(`lib/demo-data.ts` çalışma ağacında) · push ⚠ EDİLMEDİ
+
+**Sırada ne var:** `lib/demo-data.ts` commit edilecek. Sonra: demo Pazartesi dışında bir gün
+açılırsa o haftanın GEÇMİŞ günleri hâlâ boş (en yeni geçmiş ziyaret 10 gün önce); düzeltmek ciro
+hesabına dokunmayı gerektirdiği için bilinçle yapılmadı.
+
+**Açık sorular / riskler:** Tema tercihi porta göre saklanıyor — port değişirse palet sıfırlanır,
+görüşme öncesi TEMA'dan seçilmeli. Görüşmeden önce Analiz sekmesi bir kez ısıtılmalı (~10 sn).
+
+🔖 **Memory delta:** Kartuş/kuruluma özgü **çalışma günleri** de demo verisi gibi devralınıyor —
+veteriner kartuşu ÖERM'in Salı-Cumartesi'sini almış ve `kartus-calisma-gunleri.test.ts` ile
+kilitli; Pazartesi demosunda ekran boş görünüyor ve **re-seed bunu çözmez** (seed hafta başını
+`haftaBasiCalismaUTC(new Date())` ile hesaplıyor, aynı tarihler geri gelir). Mevcut
+`demo-veri-sektor-uyumu` memory'sinin aynı sınıfı — oraya eklenmeli, yeni kayıt açılmamalı.
+
+🌉 **Köprü notu:** Bu kayıt bella reposunun kendi turudur. Veteriner tarafının saha çıktısı vault'ta
+`EFFORT/Alanlar/GunesAI/CRM/Kind Vet.md` → "Demo açılışı — hazır adres" bölümüne ZATEN yazıldı;
+ayrıca işlenmesine gerek yok.
+
 ## bella — 2026-08-24 (oturum: müşteri değeri görünümü + demo kipi + hukuk-buro temaları)
 
 **Ne yapıldı:** 23 Ağu Eryaman saha turundan doğan iş. Müşteri listesi artık sıklığa

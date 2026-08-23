@@ -111,7 +111,7 @@ const GECMIS: Gecmis[] = [
   { ad: 'Selin Aksoy', tel: '05330003344', ziyaretler: [[190, 'Manikür', 600], [145, 'Pedikür', 600], [100, 'Manikür', 600], [55, 'Pedikür', 600]] },
 ];
 
-// ── Bugün · yarın · öbür gün ───────────────────────────────────────────────
+// ── Bugünden itibaren altı gün (Pzt-Cts penceresini tam doldurur) ─────────
 // [gün farkı (0=bugün), saat, ad, tel, hizmet, süre, durum, tahsil edilen tutar?]
 // Bugünün TAMAMLANMIŞ randevularına tutar yazılır; akşamki ikisi henüz
 // gerçekleşmediği için tutarsız kalır — panelin "tahmin payı" uyarısı da
@@ -133,6 +133,37 @@ const YAKLASAN: [number, string, string, string, ServiceName, number, Appointmen
   [2, '12:00', 'Zeynep Korkmaz', '05323336677', 'Cilt Bakımı',    90, 'confirmed'],
   [2, '15:00', 'Ayça Demir',     '05326669900', 'Manikür',        60, 'pending'],
   [2, '18:00', 'Ceren Öztürk',   '05327770011', 'Masaj',          60, 'confirmed'],
+
+  // ── +3 · +4 · +5 ──────────────────────────────────────────────────────
+  // Neden eklendi (24 Ağu 2026): haftalık takvim Pzt-Cts arası 6 sütun
+  // çiziyor. Küme yalnız 0/1/2'yi ürettiği için Pazartesi günü açılan
+  // demoda son ÜÇ sütun bomboş kalıyordu — ekranın sağ yarısı boş, salon
+  // perşembeden sonra hiç randevu almamış gibi görünüyordu.
+  //
+  // Kural: bu kayıtlar İLERİ TARİHLİ ve TUTARSIZ. Sebebi anlatıyı korumak:
+  // tutar yazılsaydı ciroya ve "ziyaret başına" sütununa girer, kümenin
+  // tek amacı olan Elif (2 ziyaret / ₺30.000) ↔ Merve (10 ziyaret /
+  // ₺10.000) karşıtlığı sulanırdı. Elif'e bilerek yeni ziyaret EKLENMEDİ —
+  // seyrek gelmesi onun hikâyesinin kendisi. Yoğunluk cumartesiye doğru
+  // artar; kuaförde hafta sonu dolu olması gerçeğin kendisidir.
+  [3, '10:30', 'Merve Aydın',    '05322225566', 'Manikür',        60, 'confirmed'],
+  [3, '13:00', 'Gamze Arslan',   '05329992233', 'Saç Boyama',    120, 'confirmed'],
+  [3, '16:30', 'Selin Aksoy',    '05330003344', 'Manikür',        60, 'confirmed'],
+  [3, '18:00', 'Zeynep Korkmaz', '05323336677', 'Saç Kesimi',     45, 'pending'],
+
+  [4, '09:30', 'Ayça Demir',     '05326669900', 'Kaş Tasarımı',   30, 'confirmed'],
+  [4, '11:00', 'Pınar Doğan',    '05324447788', 'Manikür',        60, 'confirmed'],
+  [4, '14:00', 'Deniz Yılmaz',   '05325558899', 'Cilt Bakımı',    90, 'confirmed'],
+  [4, '17:00', 'Buse Kaya',      '05328881122', 'Kaş Tasarımı',   30, 'confirmed'],
+  [4, '19:00', 'Merve Aydın',    '05322225566', 'Saç Kesimi',     45, 'pending'],
+
+  [5, '09:30', 'Zeynep Korkmaz', '05323336677', 'Saç Boyama',    120, 'confirmed'],
+  [5, '10:00', 'Selin Aksoy',    '05330003344', 'Pedikür',        60, 'confirmed'],
+  [5, '12:00', 'Ceren Öztürk',   '05327770011', 'Cilt Bakımı',    90, 'confirmed'],
+  [5, '13:30', 'Ayça Demir',     '05326669900', 'Kaş Tasarımı',   30, 'confirmed'],
+  [5, '15:00', 'Merve Aydın',    '05322225566', 'Kaş Tasarımı',   30, 'confirmed'],
+  [5, '16:00', 'Gamze Arslan',   '05329992233', 'Saç Kesimi',     45, 'pending'],
+  [5, '18:00', 'Pınar Doğan',    '05324447788', 'Pedikür',        60, 'confirmed'],
 ];
 
 const PERSONEL = ['Sema Yurt', 'Nazlı Tekin', 'Derya Ak'];
