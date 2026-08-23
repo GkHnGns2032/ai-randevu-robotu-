@@ -6,6 +6,10 @@ import { Check, Palette } from 'lucide-react';
 
 const PALETTES: { id: ThemeName; label: string; swatch: string; bg: string }[] = [
   { id: 'obsidian',  label: 'Obsidyen Altın',   swatch: '#D4AF6E', bg: '#09090C' },
+  { id: 'endeks',      label: 'Endeks Gündüz',    swatch: '#8A6320', bg: '#F4F1E7' },
+  { id: 'endeks-gece', label: 'Endeks Gece',      swatch: '#BFA06A', bg: '#15120F' },
+  { id: 'vitrin',      label: 'Vitrin Gündüz',    swatch: '#0A84FF', bg: '#F2F3F5' },
+  { id: 'vitrin-gece', label: 'Vitrin Gece',      swatch: '#0A84FF', bg: '#0D0F12' },
   { id: 'ivory',     label: 'Fildişi Atölye',   swatch: '#8B5A14', bg: '#F3EDE3' },
   { id: 'rose',      label: 'Gece Gülü',        swatch: '#F07090', bg: '#0D0809' },
   { id: 'ocean',     label: 'Derin Okyanus',    swatch: '#5AAAE6', bg: '#070A10' },

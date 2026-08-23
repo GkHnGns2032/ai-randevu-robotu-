@@ -43,9 +43,11 @@ function isViewId(v: string | null): v is ViewId {
 interface Props {
   appointments: Appointment[];
   staff: Staff[];
+  /** Örnek veri kipi — Akıllı Analiz kendi verisini ayrı çektiği için ona taşınmalı. */
+  demo?: boolean;
 }
 
-export function DashboardShell({ appointments, staff }: Props) {
+export function DashboardShell({ appointments, staff, demo = false }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -55,10 +57,18 @@ export function DashboardShell({ appointments, staff }: Props) {
 
   const go = useCallback(
     (id: ViewId) => {
-      const q = id === DEFAULT_VIEW ? '' : `?g=${id}`;
-      router.replace(`${pathname}${q}`, { scroll: false });
+      // Diğer sorgu parametreleri KORUNUR. Önceki hâl adresi sıfırdan kuruyordu
+      // (`?g=...` ya da boş) ve `g` dışındaki her şeyi sessizce düşürüyordu —
+      // örneğin `?demo=1` ile açılan bir panelde ilk sekme tıklamasında demo
+      // kipi kayboluyor, ekran canlı (ve boş) veriye dönüyordu. Görüşme
+      // ortasında fark edilir, ki en kötü zamandır.
+      const next = new URLSearchParams(params.toString());
+      if (id === DEFAULT_VIEW) next.delete('g');
+      else next.set('g', id);
+      const q = next.toString();
+      router.replace(`${pathname}${q ? `?${q}` : ''}`, { scroll: false });
     },
-    [router, pathname],
+    [router, pathname, params],
   );
 
   return (
@@ -128,7 +138,7 @@ export function DashboardShell({ appointments, staff }: Props) {
               <RevenueChart appointments={appointments} />
             </Panel>
             <Panel title="Akıllı Analiz">
-              <InsightsPanel />
+              <InsightsPanel demo={demo} />
             </Panel>
             <Panel title="Randevu Yoğunluğu">
               <AppointmentHeatmap appointments={appointments} />

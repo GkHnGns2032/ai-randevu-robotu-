@@ -33,13 +33,40 @@ interface CustomerRow {
   cancelledCount: number;
   noShowCount: number;
   totalSpent: number;
+  /** Son 12 ayın toplamı — "bu müşteri bana yılda ne kazandırıyor" sorusunun cevabı. */
+  spent12m: number;
+  visits12m: number;
+  /** Ziyaret başına ortalama (12 aylık). Sıklık ile değeri ayıran sayı budur:
+   *  yılda 2 gelip 30.000 bırakan müşteri, 10 gelip 10.000 bırakandan 15× değerlidir. */
+  avgPerVisit: number;
+  /** `paidAmount` taşımayan, dolayısıyla liste fiyatından TAHMİN edilen GEÇMİŞ randevu sayısı.
+   *  Sıfırdan büyükse "kazandırdı" değil "yaklaşık" demek zorundayız. */
+  estimatedCount: number;
+  /** Ciroya giren (geçmiş, iptal olmayan) randevu sayısı — tahmin oranının paydası.
+   *  `totalVisits` gelecek randevuları da içerdiği için payda olarak KULLANILAMAZ. */
+  pastVisitCount: number;
   favoriteService: string;
   lastVisit: string | null;
   nextVisit: string | null;
   nextVisitTime: string | null;
 }
 
-type SortKey = 'name' | 'totalVisits' | 'totalSpent' | 'lastVisit';
+type SortKey = 'name' | 'totalVisits' | 'totalSpent' | 'avgPerVisit' | 'lastVisit';
+
+/** Bir randevunun GERÇEK para karşılığı.
+ *
+ *  `paidAmount` fiilen tahsil edilen tutardır; `SERVICE_PRICES` yalnız liste
+ *  fiyatıdır ve indirim · kısmi ödeme · paket farkı yüzünden gerçekten kazanılan
+ *  paradan sapar. Önceki hâl her zaman liste fiyatını topluyordu, yani ekran
+ *  "kazandığın para" değil "kazanmış olman gereken para" gösteriyordu.
+ *  Gerçek tutar varsa o kullanılır; yoksa liste fiyatına düşülür ve bu düşüş
+ *  `estimatedCount` ile SAYILIR — görünmeyen tahmin, yanlış kesinlik üretir. */
+function appointmentValue(a: Appointment): { value: number; estimated: boolean } {
+  if (typeof a.paidAmount === 'number' && a.paidAmount > 0) {
+    return { value: a.paidAmount, estimated: false };
+  }
+  return { value: SERVICE_PRICES[a.service] ?? 0, estimated: true };
+}
 
 function buildCustomers(appointments: Appointment[]): CustomerRow[] {
   const map = new Map<string, Appointment[]>();
@@ -57,7 +84,42 @@ function buildCustomers(appointments: Appointment[]): CustomerRow[] {
     const cancelled = appts.filter((a) => a.status === 'cancelled');
     const noShows = appts.filter((a) => a.isNoShow);
 
-    const totalSpent = confirmed.reduce((sum, a) => sum + (SERVICE_PRICES[a.service] ?? 0), 0);
+    // Ciro YALNIZ geçmiş randevulardan sayılır. Önceki hâl gelecekteki onaylı
+    // randevuları da topluyordu: yarınki randevu henüz para kazandırmamıştır ve
+    // ödeme kaydı da olmadığı için liste fiyatından tahmin ediliyor, yani hem
+    // ciroyu şişiriyor hem "tahmin payı" uyarısını haksız yere tetikliyordu.
+    // "Bu müşteri bana ne kazandırdı" sorusunun cevabı tahsil edilmiş paradır.
+    // `isNoShow` de dışarıda: müşteri gelmediyse hizmet verilmemiştir, dolayısıyla
+    // para da kazanılmamıştır. Önceki hâl bunları liste fiyatından sayıyordu —
+    // yani gelmeyen müşteri ciroyu YÜKSELTİYORDU. Gelmeme zaten `noShowCount`
+    // sütununda ayrıca görünüyor; iki kez, üstelik ters işaretle sayılmamalı.
+    const gecmisZiyaretler = confirmed.filter(
+      (a) => a.date && !isAfter(parseISO(a.date), today) && !a.isNoShow,
+    );
+    let totalSpent = 0;
+    let estimatedCount = 0;
+    for (const a of gecmisZiyaretler) {
+      const { value, estimated } = appointmentValue(a);
+      totalSpent += value;
+      if (estimated) estimatedCount += 1;
+    }
+
+    // 12 aylık pencere — müşteri "yılda ne kazandırıyor" diye soruyor, "hep birlikte
+    // ne kazandırdı" diye değil. Yıllar önce çok harcamış bir müşteri bugünkü kararı
+    // yanıltır; pencere olmadan liste eskiyi ödüllendirir.
+    const y1Cutoff = new Date(today);
+    y1Cutoff.setFullYear(y1Cutoff.getFullYear() - 1);
+    let spent12m = 0;
+    let visits12m = 0;
+    for (const a of confirmed) {
+      if (!a.date) continue;
+      const d = parseISO(a.date);
+      if (isAfter(d, y1Cutoff) && !isAfter(d, today)) {
+        spent12m += appointmentValue(a).value;
+        visits12m += 1;
+      }
+    }
+    const avgPerVisit = visits12m > 0 ? Math.round(spent12m / visits12m) : 0;
 
     const svcCount: Record<string, number> = {};
     for (const a of confirmed) svcCount[a.service] = (svcCount[a.service] ?? 0) + 1;
@@ -74,10 +136,19 @@ function buildCustomers(appointments: Appointment[]): CustomerRow[] {
     return {
       phone,
       name,
-      totalVisits: confirmed.length,
+      // Ziyaret sayısı = GERÇEKLEŞMİŞ ziyaretler. Önceki hâl gelecekteki randevuyu
+      // da sayıyordu ve ekranda tutarsızlık üretiyordu: "3 ziyaret · ₺30.000"
+      // yazıp yanında "ziyaret başına ₺15.000" demek (30.000/2) birbirini tutmuyor.
+      // Yaklaşan randevu zaten "Sonraki" sütununda görünüyor.
+      totalVisits: gecmisZiyaretler.length,
       cancelledCount: cancelled.length,
       noShowCount: noShows.length,
       totalSpent,
+      spent12m,
+      visits12m,
+      avgPerVisit,
+      estimatedCount,
+      pastVisitCount: gecmisZiyaretler.length,
       favoriteService,
       lastVisit: pastVisits[0]?.date ?? null,
       nextVisit: futureVisits[0]?.date ?? null,
@@ -88,7 +159,11 @@ function buildCustomers(appointments: Appointment[]): CustomerRow[] {
 
 export function CustomerList({ appointments }: Props) {
   const [search, setSearch] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey>('totalVisits');
+  // Varsayılan sıralama DEĞERE göre, sıklığa göre değil (2026-08-23).
+  // Önceki varsayılan `totalVisits`'ti ve listeyi en sık geleni tepeye koyuyordu —
+  // yılda 2 gelip 30.000 bırakan müşteri, 10 gelip 10.000 bırakanın altında kalıyordu.
+  // Saha geri bildirimi bunu birebir tarif etti: "çok gelen değil, çok kazandıran kim?"
+  const [sortKey, setSortKey] = useState<SortKey>('totalSpent');
   const [sortAsc, setSortAsc] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [listOpen, setListOpen] = useState(false);
@@ -146,6 +221,7 @@ export function CustomerList({ appointments }: Props) {
         if (sortKey === 'name') { va = a.name; vb = b.name; }
         else if (sortKey === 'totalVisits') { va = a.totalVisits; vb = b.totalVisits; }
         else if (sortKey === 'totalSpent') { va = a.totalSpent; vb = b.totalSpent; }
+        else if (sortKey === 'avgPerVisit') { va = a.avgPerVisit; vb = b.avgPerVisit; }
         else if (sortKey === 'lastVisit') { va = a.lastVisit ?? ''; vb = b.lastVisit ?? ''; }
         if (va < vb) return sortAsc ? -1 : 1;
         if (va > vb) return sortAsc ? 1 : -1;
@@ -167,15 +243,28 @@ export function CustomerList({ appointments }: Props) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3">
         <p style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '3rem', color: 'var(--text-3)', fontWeight: 300 }}>∅</p>
-        <p className="text-xs tracking-widest uppercase" style={{ color: 'var(--text-3)' }}>Henüz müşteri bulunmuyor</p>
+        <p className="text-[13.5px] tracking-widest uppercase" style={{ color: 'var(--text-3)' }}>Henüz müşteri bulunmuyor</p>
       </div>
     );
   }
 
   const totalCustomers = customers.length;
   const activeCustomers = customers.filter((c) => c.totalVisits > 0).length;
-  const vipCustomers = customers.filter((c) => c.totalVisits >= 3).length;
   const totalRevenue = customers.reduce((s, c) => s + c.totalSpent, 0);
+
+  // "En değerli 5 müşteri cironun yüzde kaçı" — listenin tek cümlelik özeti.
+  // Sayı yüksekse (tipik olarak öyledir) işletmenin geliri birkaç kişiye bağlıdır
+  // ve o kişileri ADIYLA bilmek, ortalama müşteriyi bilmekten daha önemlidir.
+  const top5 = [...customers].sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 5);
+  const top5Phones = new Set(top5.map((c) => c.phone));
+  const top5Revenue = top5.reduce((s, c) => s + c.totalSpent, 0);
+  const top5Share = totalRevenue > 0 ? Math.round((top5Revenue / totalRevenue) * 100) : 0;
+
+  // Tahmin payı: tutarların kaçı gerçek tahsilat değil liste fiyatı.
+  // Görünmeyen tahmin yanlış kesinlik üretir — pay yüksekse ekranda söylenir.
+  const estimatedTotal = customers.reduce((s, c) => s + c.estimatedCount, 0);
+  const visitsTotal = customers.reduce((s, c) => s + c.pastVisitCount, 0);
+  const estimatedShare = visitsTotal > 0 ? Math.round((estimatedTotal / visitsTotal) * 100) : 0;
 
   return (
     <div>
@@ -184,23 +273,32 @@ export function CustomerList({ appointments }: Props) {
         {[
           { label: 'Toplam Müşteri', value: totalCustomers, icon: '👥' },
           { label: 'Aktif Müşteri', value: activeCustomers, icon: '✅' },
-          { label: 'VIP (3+ Ziyaret)', value: vipCustomers, icon: '⭐' },
+          { label: 'İlk 5 Müşteri · Ciro Payı', value: `%${top5Share}`, icon: '⭐' },
           { label: 'Toplam Ciro', value: `₺${totalRevenue.toLocaleString('tr-TR')}`, icon: '💰' },
         ].map((s) => (
           <div key={s.label} className="rounded-xl p-3" style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)' }}>
             <p className="text-lg mb-0.5">{s.icon}</p>
-            <p className="text-lg font-semibold tabular-nums" style={{ color: 'var(--text-1)', fontFamily: '"Cormorant Garamond", serif' }}>
+            <p className="font-semibold tabular-nums" style={{ color: 'var(--text-1)', fontFamily: 'var(--c-font-serif)', fontSize: 'clamp(1.9rem, 3vw, 2.35rem)', lineHeight: 1.05, letterSpacing: '-0.02em' }}>
               {s.value}
             </p>
-            <p className="text-[10px] tracking-wider uppercase" style={{ color: 'var(--text-3)' }}>{s.label}</p>
+            <p className="text-[12px] tracking-wider uppercase" style={{ color: 'var(--text-3)' }}>{s.label}</p>
           </div>
         ))}
       </div>
 
+      {/* Tutarların ne kadarı gerçek tahsilat, ne kadarı liste fiyatı tahmini.
+          Sessiz tahmin, yanlış kesinlik üretir — pay varsa açıkça yazılır. */}
+      {estimatedShare > 0 && (
+        <p className="text-[12.5px] mb-4 -mt-2" style={{ color: 'var(--text-3)' }}>
+          Tutarların <span className="tabular-nums" style={{ color: 'var(--amber)' }}>%{estimatedShare}</span>
+          {"'i "}ödeme kaydı olmadığı için liste fiyatından hesaplandı — gerçek tahsilat değil, yaklaşık değer.
+        </p>
+      )}
+
       {/* Toggle button */}
       <button
         onClick={() => setListOpen((p) => !p)}
-        className="w-full mb-4 flex items-center justify-between px-4 min-h-[44px] rounded-xl text-sm transition-colors hover:opacity-80"
+        className="w-full mb-4 flex items-center justify-between px-4 min-h-[44px] rounded-xl text-[15px] transition-colors hover:opacity-80"
         style={{
           background: 'var(--bg-hover)',
           border: '1px solid var(--border)',
@@ -208,10 +306,10 @@ export function CustomerList({ appointments }: Props) {
         }}
       >
         <span className="flex items-center gap-2">
-          <span className="text-[10px] tracking-[0.16em] uppercase" style={{ color: 'var(--text-3)' }}>
+          <span className="text-[12px] tracking-[0.16em] uppercase" style={{ color: 'var(--text-3)' }}>
             {listOpen ? 'Listeyi Gizle' : 'Tüm Listeyi Göster'}
           </span>
-          <span className="tabular-nums text-xs" style={{ color: 'var(--text-3)' }}>
+          <span className="tabular-nums text-[13.5px]" style={{ color: 'var(--text-3)' }}>
             ({totalCustomers} müşteri)
           </span>
         </span>
@@ -226,7 +324,7 @@ export function CustomerList({ appointments }: Props) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="İsim veya telefon ara..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none"
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl text-[15px] outline-none"
             style={{
               background: 'var(--bg-hover)',
               border: '1px solid var(--border)',
@@ -238,20 +336,21 @@ export function CustomerList({ appointments }: Props) {
 
       {/* Table */}
       {listOpen && (
-      <div className="overflow-x-auto -mx-6">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto">
+        <table className="w-full text-[15px]">
           <thead style={{ position: 'sticky', top: 0, background: 'color-mix(in srgb, var(--gold) 7%, var(--bg-card))', zIndex: 10 }}>
             <tr style={{ borderBottom: '1.5px solid color-mix(in srgb, var(--gold) 35%, transparent)' }}>
               {[
                 { key: 'name' as SortKey, label: 'Müşteri' },
                 { key: 'totalVisits' as SortKey, label: 'Ziyaret' },
-                { key: 'totalSpent' as SortKey, label: 'Harcama' },
+                { key: 'totalSpent' as SortKey, label: 'Kazandırdığı' },
+                { key: 'avgPerVisit' as SortKey, label: 'Ziyaret Başına' },
                 { key: 'lastVisit' as SortKey, label: 'Son Ziyaret' },
               ].map(({ key, label }, idx) => (
                 <th
                   key={key}
                   onClick={() => toggleSort(key)}
-                  className="text-left py-3 px-4 text-[10px] font-semibold tracking-[0.2em] uppercase cursor-pointer select-none"
+                  className="text-left py-3 px-4 text-[12px] font-semibold tracking-[0.2em] uppercase cursor-pointer select-none"
                   style={{ color: sortKey === key ? 'var(--gold)' : 'color-mix(in srgb, var(--gold) 75%, var(--text-2))', fontFamily: '"Courier New", monospace', animation: `th-in 0.35s ease ${idx * 40}ms both` }}
                 >
                   <span className="flex items-center gap-1">
@@ -259,7 +358,7 @@ export function CustomerList({ appointments }: Props) {
                   </span>
                 </th>
               ))}
-              <th className="text-left py-3 px-4 text-[10px] font-semibold tracking-[0.2em] uppercase"
+              <th className="text-left py-3 px-4 text-[12px] font-semibold tracking-[0.2em] uppercase"
                 style={{ color: 'color-mix(in srgb, var(--gold) 75%, var(--text-2))', fontFamily: '"Courier New", monospace', animation: 'th-in 0.35s ease 160ms both' }}>
                 Sonraki
               </th>
@@ -269,7 +368,11 @@ export function CustomerList({ appointments }: Props) {
           <tbody>
             {filtered.map((c, i) => {
               const isExpanded = expanded === c.phone;
-              const isVip = c.totalVisits >= 3;
+              // Yıldız artık SIKLIKTAN değil DEĞERDEN geliyor. Eski ölçüt
+              // `totalVisits >= 3` idi: sık gelen ama az bırakan müşteriyi
+              // ödüllendiriyor, yılda iki kez gelip en çok parayı bırakanı
+              // işaretsiz bırakıyordu. VIP = ciroya en çok katkı veren ilk 5.
+              const isVip = top5Phones.has(c.phone);
               const customerAppts = appointments.filter((a) => a.customerPhone === c.phone);
 
               return (
@@ -287,17 +390,17 @@ export function CustomerList({ appointments }: Props) {
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2">
                         <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-semibold"
+                          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[13.5px] font-semibold"
                           style={{ background: 'color-mix(in srgb, var(--gold) 15%, transparent)', color: 'var(--gold)' }}
                         >
                           {c.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <span style={{ color: 'var(--text-1)' }}>{c.name}</span>
+                            <span style={{ color: 'var(--text-1)', fontSize: '1rem', fontWeight: 500 }}>{c.name}</span>
                             {isVip && <Star size={10} fill="currentColor" style={{ color: 'var(--gold)' }} />}
                           </div>
-                          <span className="text-xs flex items-center gap-1" style={{ color: 'var(--text-3)' }}>
+                          <span className="text-[13.5px] flex items-center gap-1" style={{ color: 'var(--text-3)' }}>
                             <Phone size={10} />{formatPhoneTR(c.phone)}
                           </span>
                         </div>
@@ -306,17 +409,17 @@ export function CustomerList({ appointments }: Props) {
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-1.5">
                         <TrendingUp size={12} style={{ color: 'var(--mint)' }} />
-                        <span className="tabular-nums font-medium" style={{ color: 'var(--text-1)', fontFamily: '"Cormorant Garamond", serif', fontSize: '1rem' }}>
+                        <span className="tabular-nums font-medium" style={{ color: 'var(--text-1)', fontFamily: 'var(--c-font-serif)', fontSize: '1.25rem', lineHeight: 1.1 }}>
                           {c.totalVisits}
                         </span>
                         {c.cancelledCount > 0 && (
-                          <span className="text-[10px]" style={{ color: 'var(--rose)' }}>
+                          <span className="text-[12px]" style={{ color: 'var(--rose)' }}>
                             ({c.cancelledCount} iptal)
                           </span>
                         )}
                         {c.noShowCount > 0 && (
                           <span
-                            className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                            className="text-[12px] px-1.5 py-0.5 rounded-full font-medium"
                             style={{ background: 'rgba(240,160,168,0.15)', color: 'var(--rose)' }}
                           >
                             {c.noShowCount}× gelmedi
@@ -325,17 +428,38 @@ export function CustomerList({ appointments }: Props) {
                       </div>
                       <div className="flex items-center gap-1 mt-0.5">
                         <div className="w-1.5 h-1.5 rounded-full" style={{ background: SVC_COLOR[c.favoriteService] ?? 'var(--gold)' }} />
-                        <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>{c.favoriteService}</span>
+                        <span className="text-[12.5px]" style={{ color: 'var(--text-3)' }}>{c.favoriteService}</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="tabular-nums" style={{ color: 'var(--text-1)', fontFamily: '"Cormorant Garamond", serif', fontSize: '1rem' }}>
+                      <span className="tabular-nums" style={{ color: 'var(--text-1)', fontFamily: 'var(--c-font-serif)', fontSize: '1.5rem', lineHeight: 1.1, letterSpacing: '-0.015em' }}>
                         ₺{c.totalSpent.toLocaleString('tr-TR')}
                       </span>
+                      {c.spent12m > 0 && c.spent12m !== c.totalSpent && (
+                        <div className="text-[12.5px] tabular-nums" style={{ color: 'var(--text-3)' }}>
+                          son 12 ay: ₺{c.spent12m.toLocaleString('tr-TR')}
+                        </div>
+                      )}
+                    </td>
+                    {/* Sıklık ile değeri ayıran sütun. Dar ekranda gizlenir —
+                        repo kuralı: mobilde isim ve aksiyon önceliklidir. */}
+                    <td className="py-3.5 px-4 hidden md:table-cell">
+                      {c.avgPerVisit > 0 ? (
+                        <>
+                          <span className="tabular-nums" style={{ color: 'var(--gold)', fontFamily: 'var(--c-font-serif)', fontSize: '1.25rem', lineHeight: 1.1 }}>
+                            ₺{c.avgPerVisit.toLocaleString('tr-TR')}
+                          </span>
+                          <div className="text-[12.5px] tabular-nums" style={{ color: 'var(--text-3)' }}>
+                            {c.visits12m} ziyaret / yıl
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-[13.5px]" style={{ color: 'var(--text-3)' }}>—</span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4">
                       {c.lastVisit ? (
-                        <span className="text-sm" style={{ color: 'var(--text-2)' }}>
+                        <span className="text-[15px]" style={{ color: 'var(--text-2)' }}>
                           {format(parseISO(c.lastVisit), 'd MMMM yyyy', { locale: tr })}
                         </span>
                       ) : (
@@ -347,14 +471,14 @@ export function CustomerList({ appointments }: Props) {
                         <div>
                           <div className="flex items-center gap-1">
                             <Calendar size={11} style={{ color: 'var(--mint)' }} />
-                            <span className="text-xs" style={{ color: 'var(--mint)' }}>
+                            <span className="text-[13.5px]" style={{ color: 'var(--mint)' }}>
                               {format(parseISO(c.nextVisit), 'd MMMM yyyy', { locale: tr })}
                             </span>
                           </div>
-                          <span className="text-[11px] tabular-nums" style={{ color: 'var(--text-3)' }}>{c.nextVisitTime}</span>
+                          <span className="text-[12.5px] tabular-nums" style={{ color: 'var(--text-3)' }}>{c.nextVisitTime}</span>
                         </div>
                       ) : (
-                        <span className="text-xs" style={{ color: 'var(--text-3)' }}>Yok</span>
+                        <span className="text-[13.5px]" style={{ color: 'var(--text-3)' }}>Yok</span>
                       )}
                     </td>
                   </tr>
@@ -362,10 +486,46 @@ export function CustomerList({ appointments }: Props) {
                   {/* Expanded detail */}
                   {isExpanded && (
                     <tr>
-                      <td colSpan={5} style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-hover)' }}>
-                        <div className="px-4 pb-4">
+                      <td colSpan={6} style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-hover)' }}>
+                        <div className="px-4 pb-4 pt-3">
+                          {/* NET ÖZET — tıklandığında ilk görülen şey "bu müşteri bana ne
+                              kazandırdı" olmalı; randevu dökümü onun altında kalır. */}
+                          <div className="flex flex-wrap items-end gap-x-8 gap-y-3 mb-4 pb-3" style={{ borderBottom: '1px solid var(--border)' }}>
+                            <div>
+                              <p className="text-[12.5px] tracking-[0.14em] uppercase mb-0.5" style={{ color: 'var(--text-3)' }}>Toplam kazandırdığı</p>
+                              <p className="tabular-nums" style={{ color: 'var(--gold)', fontFamily: 'var(--c-font-serif)', fontSize: '1.7rem', lineHeight: 1.1 }}>
+                                ₺{c.totalSpent.toLocaleString('tr-TR')}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[12.5px] tracking-[0.14em] uppercase mb-0.5" style={{ color: 'var(--text-3)' }}>Ziyaret başına</p>
+                              <p className="tabular-nums" style={{ color: 'var(--text-1)', fontFamily: 'var(--c-font-serif)', fontSize: '1.35rem', lineHeight: 1.1 }}>
+                                {c.avgPerVisit > 0 ? `₺${c.avgPerVisit.toLocaleString('tr-TR')}` : '—'}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[12.5px] tracking-[0.14em] uppercase mb-0.5" style={{ color: 'var(--text-3)' }}>Son 12 ay</p>
+                              <p className="tabular-nums" style={{ color: 'var(--text-1)', fontFamily: 'var(--c-font-serif)', fontSize: '1.35rem', lineHeight: 1.1 }}>
+                                ₺{c.spent12m.toLocaleString('tr-TR')} <span className="text-[13.5px]" style={{ color: 'var(--text-3)', fontFamily: 'inherit' }}>· {c.visits12m} ziyaret</span>
+                              </p>
+                            </div>
+                            {c.noShowCount > 0 && (
+                              <div>
+                                <p className="text-[12.5px] tracking-[0.14em] uppercase mb-0.5" style={{ color: 'var(--text-3)' }}>Gelmediği</p>
+                                <p className="tabular-nums" style={{ color: 'var(--rose)', fontFamily: 'var(--c-font-serif)', fontSize: '1.35rem', lineHeight: 1.1 }}>
+                                  {c.noShowCount} randevu
+                                </p>
+                              </div>
+                            )}
+                            {c.estimatedCount > 0 && (
+                              <p className="text-[12.5px] w-full" style={{ color: 'var(--text-3)' }}>
+                                {c.estimatedCount} randevuda ödeme kaydı yok — o tutarlar liste fiyatından hesaplandı.
+                              </p>
+                            )}
+                          </div>
+
                           {/* Randevu Geçmişi */}
-                          <p className="text-[10px] tracking-[0.16em] uppercase mb-2" style={{ color: 'var(--text-3)' }}>
+                          <p className="text-[12.5px] tracking-[0.16em] uppercase mb-2" style={{ color: 'var(--text-3)' }}>
                             Randevu Geçmişi
                           </p>
                           <div className="space-y-1.5 mb-4">
@@ -379,17 +539,17 @@ export function CustomerList({ appointments }: Props) {
                                 >
                                   <div className="flex items-center gap-3">
                                     <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: SVC_COLOR[a.service] ?? 'var(--gold)' }} />
-                                    <span className="text-xs font-medium" style={{ color: 'var(--text-1)' }}>{a.service}</span>
-                                    <span className="text-xs" style={{ color: 'var(--text-3)' }}>
+                                    <span className="text-[15px] font-medium" style={{ color: 'var(--text-1)' }}>{a.service}</span>
+                                    <span className="text-[13.5px]" style={{ color: 'var(--text-3)' }}>
                                       {a.date ? format(parseISO(a.date), 'd MMMM yyyy', { locale: tr }) : '—'} · {a.time}
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-3">
-                                    <span className="text-xs tabular-nums" style={{ color: 'var(--text-2)' }}>
-                                      ₺{SERVICE_PRICES[a.service]?.toLocaleString('tr-TR') ?? '—'}
+                                    <span className="text-[13.5px] tabular-nums" style={{ color: 'var(--text-2)' }}>
+                                      ₺{appointmentValue(a).value.toLocaleString('tr-TR')}
                                     </span>
                                     <span
-                                      className="text-[10px] px-2 py-0.5 rounded-full"
+                                      className="text-[12px] px-2 py-0.5 rounded-full"
                                       style={{
                                         background: a.status === 'confirmed' ? 'rgba(126,222,208,0.1)' : a.status === 'cancelled' ? 'rgba(240,160,168,0.1)' : 'rgba(240,200,112,0.1)',
                                         color: a.status === 'confirmed' ? 'var(--mint)' : a.status === 'cancelled' ? 'var(--rose)' : 'var(--amber)',
@@ -404,15 +564,15 @@ export function CustomerList({ appointments }: Props) {
 
                           {/* Müşteri Notları */}
                           <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
-                            <p className="text-[10px] tracking-[0.16em] uppercase mb-2" style={{ color: 'var(--text-3)' }}>
+                            <p className="text-[12px] tracking-[0.16em] uppercase mb-2" style={{ color: 'var(--text-3)' }}>
                               Notlar & Etiketler
                             </p>
 
                             {/* Mevcut notlar */}
                             {noteLoading === c.phone ? (
-                              <p className="text-xs" style={{ color: 'var(--text-3)' }}>Yükleniyor...</p>
+                              <p className="text-[13.5px]" style={{ color: 'var(--text-3)' }}>Yükleniyor...</p>
                             ) : (notes[c.phone] ?? []).length === 0 ? (
-                              <p className="text-xs mb-2" style={{ color: 'var(--text-3)' }}>Henüz not yok.</p>
+                              <p className="text-[13.5px] mb-2" style={{ color: 'var(--text-3)' }}>Henüz not yok.</p>
                             ) : (
                               <div className="space-y-1.5 mb-2">
                                 {(notes[c.phone] ?? []).map((n) => {
@@ -426,13 +586,13 @@ export function CustomerList({ appointments }: Props) {
                                       <div className="flex items-start gap-2 min-w-0">
                                         {tagCfg && (
                                           <span
-                                            className="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0"
+                                            className="text-[12px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0"
                                             style={{ background: tagCfg.bg, color: tagCfg.color }}
                                           >
                                             {n.tag}
                                           </span>
                                         )}
-                                        <span className="text-xs" style={{ color: 'var(--text-2)' }}>{n.note}</span>
+                                        <span className="text-[13.5px]" style={{ color: 'var(--text-2)' }}>{n.note}</span>
                                       </div>
                                       <button
                                         onClick={() => handleDeleteNote(c.phone, n.id)}
@@ -452,7 +612,7 @@ export function CustomerList({ appointments }: Props) {
                               <select
                                 value={newTag}
                                 onChange={(e) => setNewTag(e.target.value as CustomerTag | '')}
-                                className="px-2 py-1.5 rounded-lg text-xs flex-shrink-0"
+                                className="px-2 py-1.5 rounded-lg text-[13.5px] flex-shrink-0"
                                 style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
                               >
                                 <option value="">Etiket</option>
@@ -465,7 +625,7 @@ export function CustomerList({ appointments }: Props) {
                                 onChange={(e) => setNewNote(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === 'Enter') handleAddNote(c.phone); }}
                                 placeholder="Not ekle..."
-                                className="flex-1 px-3 py-1.5 rounded-lg text-xs"
+                                className="flex-1 px-3 py-1.5 rounded-lg text-[13.5px]"
                                 style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
                               />
                               <button
@@ -489,7 +649,7 @@ export function CustomerList({ appointments }: Props) {
 
         {filtered.length === 0 && (
           <div className="py-12 text-center">
-            <p className="text-xs tracking-widest uppercase" style={{ color: 'var(--text-3)' }}>Sonuç bulunamadı</p>
+            <p className="text-[13.5px] tracking-widest uppercase" style={{ color: 'var(--text-3)' }}>Sonuç bulunamadı</p>
           </div>
         )}
       </div>

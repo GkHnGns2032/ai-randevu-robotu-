@@ -9,9 +9,19 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
 export const revalidate = 1800;
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const appointments = await listAppointments();
+    // Panelin geri kalanı verisini `page.tsx`'ten prop olarak alır; bu uç ise
+    // KENDİ verisini çekiyordu. Sonuç: `?demo=1` ile açılan panoda diğer tüm
+    // görünümler örnek veriyi gösterirken Akıllı Analiz canlı (ve bu hafta boş)
+    // tabana bakıyor, "%0 doluluk · ay sonu ₺0" basıyor ve modele "salon
+    // tamamen boş" dedirtiyordu. Hesap mantığı TEK kalsın diye kopyalamak
+    // yerine yalnız KAYNAK değiştiriliyor — iki ayrı hesap zamanla birbirinden
+    // ayrılır ve hangisinin doğru olduğu bilinemez.
+    const demo = new URL(request.url).searchParams.get('demo') === '1';
+    const appointments = demo
+      ? (await import('@/lib/demo-data')).buildDemoAppointments()
+      : await listAppointments();
     const now = new Date();
     const today = format(now, 'yyyy-MM-dd');
 

@@ -14,12 +14,26 @@ import { Scissors } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-async function DashboardContent() {
+// DEMO KİPİ (?demo=1) — saha görüşmelerinde panelin ne anlattığını göstermek için.
+// Airtable'a HİÇ dokunmaz: ne okur ne yazar, veri tamamen yereldir. Canlı tabanda
+// 6 test müşterisi / ₺2.050 var ve o veriyle panel doğru çalışsa da hiçbir şey
+// anlatmıyor. Kip açıkken ekranda kalıcı bir rozet durur — örnek veri olduğunu
+// gizlemek, ilk yalandır ve geri dönüşü yoktur.
+async function DashboardContent({ demo }: { demo: boolean }) {
+  if (demo) {
+    const { buildDemoAppointments, DEMO_STAFF } = await import('@/lib/demo-data');
+    return <DashboardShell appointments={buildDemoAppointments()} staff={DEMO_STAFF} demo />;
+  }
   const [appointments, staff] = await Promise.all([listAppointments(), listStaff()]);
   return <DashboardShell appointments={appointments} staff={staff} />;
 }
 
-export default function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const demo = (await searchParams).demo === '1';
   return (
     <ThemeProvider>
       <ScrollToTop />
@@ -98,8 +112,22 @@ export default function DashboardPage() {
           <NewAppointmentButton />
         </div>
 
+        {demo && (
+          <div
+            className="mb-5 px-4 py-2.5 rounded-xl text-[11px] tracking-wide"
+            style={{
+              background: 'color-mix(in srgb, var(--amber) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--amber) 40%, transparent)',
+              color: 'var(--amber)',
+            }}
+          >
+            <b>ÖRNEK VERİ</b> — bu ekrandaki müşteriler ve randevular gerçek değildir,
+            sistemin ne gösterdiğini anlatmak için hazırlanmıştır.
+          </div>
+        )}
+
         <Suspense fallback={<DashboardSkeleton />}>
-          <DashboardContent />
+          <DashboardContent demo={demo} />
         </Suspense>
       </main>
     </ThemeProvider>
