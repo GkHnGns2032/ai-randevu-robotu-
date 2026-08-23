@@ -7,7 +7,15 @@ import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInter
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
-export const revalidate = 1800;
+// `?demo=1` okumak `request.url`e dokunuyor; bu, rotanın derleme anında
+// STATİK üretilmesini imkânsız kılıyor ve `revalidate` ile birlikte build
+// sırasında `Dynamic server usage` hatası basıyordu (derleme yeşil kalıyor,
+// rota sessizce dinamiğe düşüyordu — yani ölçülmeyen bir kip değişikliği).
+// Kip artık AÇIKÇA dinamik. Önbellek kaybolmuyor: yanıtın kendi
+// `Cache-Control: s-maxage=1800` başlığı 30 dakikalık katmanı taşımaya
+// devam ediyor. Zaten canlı Airtable okuyan bir uç için derleme-anı statik
+// üretim de yanlıştı — build'deki veriyi servis ediyordu.
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
