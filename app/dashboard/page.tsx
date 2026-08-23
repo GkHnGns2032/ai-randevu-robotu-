@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { listAppointments } from '@/lib/airtable';
+import { logger } from '@/lib/logger';
 import { listStaff } from '@/lib/staff';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { ThemeProvider } from '@/components/dashboard/ThemeProvider';
@@ -21,8 +22,29 @@ export const dynamic = 'force-dynamic';
 // gizlemek, ilk yalandır ve geri dönüşü yoktur.
 async function DashboardContent({ demo }: { demo: boolean }) {
   if (demo) {
+    // Örnek veri CANLI KAYITLARLA BİRLEŞİR — dışlamaz.
+    // İlk sürüm demo kipinde Airtable'ı hiç okumuyordu; sonucu şuydu: sahada
+    // robottan randevu alıp panoda göstermek İMKÂNSIZDI. Ya dolu ekran
+    // (örnek veri, yeni kayıt görünmez) ya canlı ekran (yeni kayıt görünür,
+    // ekran neredeyse boş) — ikisi birden olmuyordu. Oysa demonun bütün
+    // anlamı "az önce aldığınız randevu, işte burada" diyebilmek.
+    // Airtable düşerse demo yine açılır (fail-soft): boş dizi, sessiz değil —
+    // hata loglanır, ama görüşme çökmez.
     const { buildDemoAppointments, DEMO_STAFF } = await import('@/lib/demo-data');
-    return <DashboardShell appointments={buildDemoAppointments()} staff={DEMO_STAFF} demo />;
+    const [canliRandevular, canliPersonel] = await Promise.all([
+      listAppointments().catch((e) => {
+        logger.error('demo_canli_randevu_okunamadi', { error: e instanceof Error ? e.message : String(e) });
+        return [];
+      }),
+      listStaff().catch(() => []),
+    ]);
+    return (
+      <DashboardShell
+        appointments={[...buildDemoAppointments(), ...canliRandevular]}
+        staff={[...DEMO_STAFF, ...canliPersonel]}
+        demo
+      />
+    );
   }
   const [appointments, staff] = await Promise.all([listAppointments(), listStaff()]);
   return <DashboardShell appointments={appointments} staff={staff} />;
@@ -121,8 +143,9 @@ export default async function DashboardPage({
               color: 'var(--amber)',
             }}
           >
-            <b>ÖRNEK VERİ</b> — bu ekrandaki müşteriler ve randevular gerçek değildir,
-            sistemin ne gösterdiğini anlatmak için hazırlanmıştır.
+            <b>ÖRNEK VERİ + CANLI KAYIT</b> — geçmiş müşteriler ve randevular örnektir,
+            sistemin ne gösterdiğini anlatmak için hazırlanmıştır. <b>Sistemden yeni
+            alınan randevular buraya gerçek olarak düşer.</b>
           </div>
         )}
 

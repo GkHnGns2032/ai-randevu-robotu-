@@ -27,8 +27,13 @@ export async function GET(request: Request) {
     // yerine yalnız KAYNAK değiştiriliyor — iki ayrı hesap zamanla birbirinden
     // ayrılır ve hangisinin doğru olduğu bilinemez.
     const demo = new URL(request.url).searchParams.get('demo') === '1';
+    // Demo kipinde de örnek + CANLI birleşir; pano ile aynı kümeyi görmezse
+    // iki yüzey aynı ekranda çelişir (bugün dört kez yakalanan sınıf).
     const appointments = demo
-      ? (await import('@/lib/demo-data')).buildDemoAppointments()
+      ? [
+          ...(await import('@/lib/demo-data')).buildDemoAppointments(),
+          ...(await listAppointments().catch(() => [])),
+        ]
       : await listAppointments();
     const now = new Date();
     const today = format(now, 'yyyy-MM-dd');
