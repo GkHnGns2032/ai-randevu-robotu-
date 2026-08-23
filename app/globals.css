@@ -115,6 +115,40 @@ html[data-theme="endeks"], html[data-theme="endeks-gece"] {
   font-size: 13px !important; opacity: 0.55;
 }
 
+/* KART KALDIRMA HER YÜZEYDE. İlk sürüm yalnız `section.grain-card`i (yani
+   `Panel` bileşenini) hedefliyordu; "Bugün" görünümü kendi kart div'lerini
+   kuruyor (`rounded-2xl` + `background: var(--bg-card)`) ve dokunulmadan
+   kalmıştı — gazete sayfasında duran çerçeveli kutular. Vitrin'in "birebir"
+   oturmasının sebebi de buydu: onun dili ZATEN kart, Bella'nın yapısıyla
+   çakışmıyor. Endeks ise YAPI KALDIRMAK istiyor ve kaldırma her yüzeye
+   uygulanmadıkça yarım görünür. */
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) [style*="--bg-card"]:not(table):not(td):not(th) {
+  background: transparent !important;
+  border-color: var(--border) !important;
+  border-width: 0 !important;
+  border-top-width: 2px !important;
+  border-top-style: solid !important;
+  border-top-color: var(--text-1) !important;
+  box-shadow: none !important;
+}
+/* İç bölüm başlıkları da (Sıradaki · Bugün · Personel Doluluk) serif antet. */
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) [style*="--bg-card"] > div:first-child > h2,
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) [style*="--bg-card"] > div:first-child > h3 {
+  font-family: var(--c-font-serif) !important;
+  font-size: 21px !important;
+  letter-spacing: -0.02em !important;
+  text-transform: none !important;
+}
+/* Aktif sekme: kutu değil, 2px alt kural (prototipin sekme şeridi). */
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) nav[aria-label="Panel görünümleri"] button[aria-current="page"] {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 2px solid var(--text-1) !important;
+}
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) nav[aria-label="Panel görünümleri"] button {
+  border-color: transparent !important;
+}
+
 /* Şeridin ilk sütununda ayraç OLMAZ — kural iki sütunu AYIRIR, kenar çizmez. */
 :is([data-theme="endeks"], [data-theme="endeks-gece"]) .grid > div[style*="--bg-hover"]:first-child {
   border-left: 0 !important; padding-left: 0 !important;
