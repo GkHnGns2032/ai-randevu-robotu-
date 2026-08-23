@@ -19,7 +19,7 @@ const NON_CSS_KEYS = new Set(['dashboardTheme']);
 
 /** Panel paleti seçenekleri — ThemeProvider ile aynı liste. */
 export const DASHBOARD_THEMES = [
-  'obsidian', 'endeks', 'endeks-gece',
+  'obsidian', 'endeks', 'endeks-gece', 'vitrin', 'vitrin-gece',
   'ivory', 'rose', 'ocean', 'emerald', 'amethyst', 'beige', 'midnight',
 ] as const;
 
