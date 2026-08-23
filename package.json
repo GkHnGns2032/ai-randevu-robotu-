@@ -4,7 +4,7 @@
   "description": "AI Randevu Robotu - Beauty Salon Appointment Booking System",
   "main": "index.js",
   "scripts": {
-    "dev": "next dev",
+    "dev": "NEXT_DIST_DIR=.next-dev next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint ."
