@@ -86,7 +86,49 @@ function Skeleton() {
   );
 }
 
-export function InsightsPanel() {
+/** Modelin döndürdüğü metin markdown'dır (`## başlık`, `**kalın**`) ama düz
+ *  metin olarak basılıyordu — ekranda `## 💡 Bu Haftaki Öneri` ve `**Saç
+ *  Kesimi**` aynen görünüyordu. Kütüphane eklemeden, yalnız fiilen gelen iki
+ *  işaretlemeyi çözüyoruz: başlık satırı ve kalın. Bilinmeyen işaretleme
+ *  gelirse metin bozulmaz, olduğu gibi kalır. */
+function Markdown({ text }: { text: string }) {
+  const bloklar = text
+    .split(/\n{2,}/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+
+  return (
+    <>
+      {bloklar.map((blok, i) => {
+        const baslikMi = /^#{1,6}\s/.test(blok);
+        const govde = blok.replace(/^#{1,6}\s*/, '').replace(/\n/g, ' ');
+        const parcalar = govde.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+        return (
+          <p
+            key={i}
+            className={baslikMi ? 'text-sm font-semibold mb-1.5' : 'text-sm leading-relaxed mb-2 last:mb-0'}
+            style={{ color: baslikMi ? 'var(--gold)' : 'var(--text-1)' }}
+          >
+            {parcalar.map((p, j) =>
+              p.startsWith('**') && p.endsWith('**') ? (
+                <strong key={j} style={{ color: 'var(--text-1)' }}>{p.slice(2, -2)}</strong>
+              ) : (
+                <span key={j}>{p}</span>
+              ),
+            )}
+          </p>
+        );
+      })}
+    </>
+  );
+}
+
+interface InsightsPanelProps {
+  /** Örnek veri kipi — uç noktaya da taşınır, yoksa panel canlı tabana bakar. */
+  demo?: boolean;
+}
+
+export function InsightsPanel({ demo = false }: InsightsPanelProps) {
   const [data, setData] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(true);
   const [spinning, setSpinning] = useState(false);
@@ -95,7 +137,7 @@ export function InsightsPanel() {
     setSpinning(true);
     setLoading(!data);
     try {
-      const res = await fetch('/api/insights');
+      const res = await fetch(demo ? '/api/insights?demo=1' : '/api/insights');
       const json = await res.json() as Insights;
       setData(json);
     } catch (err) {
@@ -107,7 +149,7 @@ export function InsightsPanel() {
       setLoading(false);
       setSpinning(false);
     }
-  }, [data]);
+  }, [data, demo]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, []);
@@ -184,9 +226,7 @@ export function InsightsPanel() {
               </span>
               <Sparkles size={10} style={{ color: 'var(--gold)', opacity: 0.7 }} />
             </div>
-            <p className="text-sm leading-relaxed" style={{ color: 'var(--text-1)' }}>
-              {data.recommendation}
-            </p>
+            <Markdown text={data.recommendation} />
             <CacheAge generatedAt={data.generatedAt} />
           </div>
           <button
