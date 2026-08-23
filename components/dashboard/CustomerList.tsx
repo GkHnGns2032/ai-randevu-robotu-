@@ -278,7 +278,7 @@ export function CustomerList({ appointments }: Props) {
         ].map((s) => (
           <div key={s.label} className="rounded-xl p-3" style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)' }}>
             <p className="text-lg mb-0.5">{s.icon}</p>
-            <p className="text-lg font-semibold tabular-nums" style={{ color: 'var(--text-1)', fontFamily: '"Cormorant Garamond", serif' }}>
+            <p className="font-semibold tabular-nums" style={{ color: 'var(--text-1)', fontFamily: 'var(--c-font-serif)', fontSize: 'clamp(1.9rem, 3vw, 2.35rem)', lineHeight: 1.05, letterSpacing: '-0.02em' }}>
               {s.value}
             </p>
             <p className="text-[10px] tracking-wider uppercase" style={{ color: 'var(--text-3)' }}>{s.label}</p>
@@ -409,7 +409,7 @@ export function CustomerList({ appointments }: Props) {
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-1.5">
                         <TrendingUp size={12} style={{ color: 'var(--mint)' }} />
-                        <span className="tabular-nums font-medium" style={{ color: 'var(--text-1)', fontFamily: '"Cormorant Garamond", serif', fontSize: '1rem' }}>
+                        <span className="tabular-nums font-medium" style={{ color: 'var(--text-1)', fontFamily: 'var(--c-font-serif)', fontSize: '1.25rem', lineHeight: 1.1 }}>
                           {c.totalVisits}
                         </span>
                         {c.cancelledCount > 0 && (
@@ -432,11 +432,11 @@ export function CustomerList({ appointments }: Props) {
                       </div>
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="tabular-nums" style={{ color: 'var(--text-1)', fontFamily: '"Cormorant Garamond", serif', fontSize: '1rem' }}>
+                      <span className="tabular-nums" style={{ color: 'var(--text-1)', fontFamily: 'var(--c-font-serif)', fontSize: '1.5rem', lineHeight: 1.1, letterSpacing: '-0.015em' }}>
                         ₺{c.totalSpent.toLocaleString('tr-TR')}
                       </span>
                       {c.spent12m > 0 && c.spent12m !== c.totalSpent && (
-                        <div className="text-[11px] tabular-nums" style={{ color: 'var(--text-3)' }}>
+                        <div className="text-[12.5px] tabular-nums" style={{ color: 'var(--text-3)' }}>
                           son 12 ay: ₺{c.spent12m.toLocaleString('tr-TR')}
                         </div>
                       )}
@@ -446,10 +446,10 @@ export function CustomerList({ appointments }: Props) {
                     <td className="py-3.5 px-4 hidden md:table-cell">
                       {c.avgPerVisit > 0 ? (
                         <>
-                          <span className="tabular-nums" style={{ color: 'var(--gold)', fontFamily: '"Cormorant Garamond", serif', fontSize: '1rem' }}>
+                          <span className="tabular-nums" style={{ color: 'var(--gold)', fontFamily: 'var(--c-font-serif)', fontSize: '1.25rem', lineHeight: 1.1 }}>
                             ₺{c.avgPerVisit.toLocaleString('tr-TR')}
                           </span>
-                          <div className="text-[11px] tabular-nums" style={{ color: 'var(--text-3)' }}>
+                          <div className="text-[12.5px] tabular-nums" style={{ color: 'var(--text-3)' }}>
                             {c.visits12m} ziyaret / yıl
                           </div>
                         </>
