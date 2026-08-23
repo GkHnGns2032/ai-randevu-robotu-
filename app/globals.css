@@ -21,6 +21,155 @@
   --sf: #D4AF6E; --sv: #F0E0B0; --st: #C09040;
   --orb-1: #D4AF6E; --orb-2: #E8A0A8; --mode: dark;
 }
+/* 2 · Endeks Gündüz — hukuk-buro editoryal paleti (gazete kâğıdı + mürekkep)
+   Kaynak: ~/Desktop/PROJECTS/hukuk-buro src/app/globals.css `:root` bloğu.
+   Renkler ORADAN alındı, türetilmedi: zemin/yuzey/kagit/kum/solgun/cizgi ve
+   aksanlar pas(kırmızı) · yosun(yeşil) · sari(oker). Bella'nın 5 aksan
+   token'ından sky/lavender karşılığı yoktu; hukuk-buro'nun kendi kategori
+   renklerinden alındı (kat-5 çivit, kat-6 mor-gri) — uydurulmadı. */
+[data-theme="endeks"] {
+  --bg: #F4F1E7; --bg-card: #F8F5EE; --bg-hover: #ECE7DA;
+  --border: rgba(26,23,20,0.2); --border-gold: rgba(138,99,32,0.28);
+  --text-1: #1A1714; --text-2: rgba(26,23,20,0.62); --text-3: #6A6255;
+  --gold: #8A6320; --gold-bg: rgba(138,99,32,0.085);
+  --rose: #C0140F; --mint: #4A6B48; --sky: #4F5580; --lavender: #6A4E6E; --amber: #8A6A2F;
+  --shadow-card: 0 0 0 1px rgba(26,23,20,0.22);
+  --orb-op: 0.03; --grain-op: 0.03;
+  --sf: #8A6320; --sv: #C0140F; --st: #4A6B48;
+  --orb-1: #8A6320; --orb-2: #C0140F; --mode: light;
+}
+/* 3 · Endeks Gece — aynı paletin gece hâli (hukuk-buro `[data-tema="gece"]`) */
+[data-theme="endeks-gece"] {
+  --bg: #15120F; --bg-card: #1F1A16; --bg-hover: #1A1613;
+  --border: rgba(237,230,218,0.15); --border-gold: rgba(191,160,106,0.28);
+  --text-1: #EDE6DA; --text-2: rgba(237,230,218,0.78); --text-3: rgba(237,230,218,0.6);
+  --gold: #BFA06A; --gold-bg: rgba(191,160,106,0.12);
+  --rose: #C1543D; --mint: #6FAFA8; --sky: #96A7D6; --lavender: #9B90CE; --amber: #C9A46B;
+  --shadow-card: 0 0 0 1px rgba(237,230,218,0.17);
+  --orb-op: 0.05; --grain-op: 0.035;
+  --sf: #BFA06A; --sv: #EDE6DA; --st: #C1543D;
+  --orb-1: #BFA06A; --orb-2: #7FA6C9; --mode: dark;
+}
+/* ── ENDEKS TASARIM DİLİ — renk DEĞİL, BİÇİM katmanı ───────────────────
+   SPEC yazı değil dosya: hukuk-buro `docs/prototip/yon/endeks-belge.html`
+   (R16 "Endeks + Belge disiplini"). Oradan taşınan yapısal kararlar:
+     · YARIÇAP 0 · GÖLGE YOK · **KART YOK** — ayırıcı yalnız KURAL:
+       2px (bölüm) · 1px (satır) · hairline (hücre). İlk denemede kartları
+       koruyup yalnız köşelerini kesmiştim; hissiyatın gelmemesinin sebebi
+       buydu — kart, bu dilde bir kutu değil, OLMAMASI gereken bir şey.
+     · dev serif bölüm anteti (Fraunces) + minik harf-aralıklı mono etiket
+     · rakam mono · kırmızı YALNIZ alarm
+     · gövde 14-15px: prototipin taban ölçüsü, Bella'nın 10-11px etiketleri
+       bu dilde okunmuyor.
+   `rounded-full` dışarıda: köşe işlemi değil, şeklin kendisi. */
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) {
+  --c-font-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --c-font-sans: 'Libre Franklin', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --c-font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --orb-op: 0;
+}
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) [class*="rounded"]:not([class*="rounded-full"]) {
+  border-radius: 0 !important;
+}
+/* Gömülü aileleri temaya çek — panel başlıkları ve rakamlar inline taşıyor. */
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) [style*="Cormorant"] { font-family: var(--c-font-serif) !important; }
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) [style*="Courier"]   { font-family: var(--c-font-mono)  !important; }
+
+/* KART → BÖLÜM. Dolgu, çerçeve ve gölge kalkar; üstte 2px bölüm kuralı kalır. */
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) section.grain-card {
+  background: transparent !important;
+  border: 0 !important;
+  border-top: 2px solid var(--text-1) !important;
+  box-shadow: none !important;
+}
+/* Bölüm anteti: minik mono etiket → DEV SERİF manşet (prototipteki "Dosyalar"). */
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) section.grain-card > div:first-child {
+  border-bottom: 1px solid var(--border) !important;
+  padding-top: 1.15rem; padding-bottom: 0.9rem;
+}
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) section.grain-card > div:first-child > h2 {
+  font-family: var(--c-font-serif) !important;
+  font-size: clamp(26px, 3.2vw, 38px) !important;
+  line-height: 1.04 !important;
+  letter-spacing: -0.028em !important;
+  text-transform: none !important;
+  font-weight: 600 !important;
+  color: var(--text-1) !important;
+}
+/* Antetin yanındaki dekoratif degrade çizgi bu dilde gürültü. */
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) section.grain-card > div:first-child > div[style*="linear-gradient"] {
+  display: none !important;
+}
+
+/* SAYI KUTULARI → KURAL AYRAÇLI ŞERİT (prototipteki 4 AÇIK / 4 KAÇAN / 0 KAPALI). */
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) .grid > div[style*="--bg-hover"] {
+  background: transparent !important;
+  border: 0 !important;
+  border-left: 1px solid var(--border) !important;
+  padding: 0.25rem 0 0.25rem 0.95rem !important;
+}
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) .grid > div[style*="--bg-hover"] > p:nth-child(2) {
+  font-size: 30px !important; line-height: 1.05 !important; letter-spacing: -0.024em !important;
+}
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) .grid > div[style*="--bg-hover"] > p:first-child {
+  font-size: 13px !important; opacity: 0.55;
+}
+
+/* Şeridin ilk sütununda ayraç OLMAZ — kural iki sütunu AYIRIR, kenar çizmez. */
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) .grid > div[style*="--bg-hover"]:first-child {
+  border-left: 0 !important; padding-left: 0 !important;
+}
+/* Emoji ikon bu dilde yok: prototipte hiç kullanılmıyor, tipografi tek araç. */
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) .grid > div[style*="--bg-hover"] > p:first-child {
+  display: none !important;
+}
+/* Dolgulu düğme/çubuk → kural. "Yüzen katman" yanılsaması bu dilde yasak. */
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) button[style*="--bg-hover"],
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) input[style*="--bg-hover"] {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+/* Bölüm anteti ile içerik aynı sol kenarda başlar (prototipte hizalıdır). */
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) section.grain-card > div:first-child {
+  padding-left: 0 !important; padding-right: 0 !important;
+  margin-left: 1.25rem; margin-right: 1.25rem;
+}
+
+/* Negatif kenar boşluğu bu dilde TAŞIRIYOR. Tablo sarmalayıcısı `-mx-6` ile
+   kapsayıcının dışına çıkıyordu; Endeks'te kapsayıcı dolgusu değiştiği için
+   ilk sütun kırpılıyor ve başlık "ÜŞTERİ" diye okunuyordu. */
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) .-mx-6 {
+  margin-left: 0 !important; margin-right: 0 !important;
+}
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) table { width: 100%; }
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) th:first-child,
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) td:first-child { padding-left: 0 !important; }
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) th:last-child,
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) td:last-child { padding-right: 0 !important; }
+
+/* OKUNABİLİRLİK — prototipin taban ölçüsü 14px; Bella'nın 9-11px'leri bu
+   dilde okunmuyor. Hiyerarşi korunur, taban yükselir. */
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) .text-\[9px\]    { font-size: 11px !important; }
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) .text-\[10px\]   { font-size: 12px !important; }
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) .text-\[10\.5px\]{ font-size: 12px !important; }
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) .text-\[11px\]   { font-size: 12.5px !important; }
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) .text-\[11\.5px\]{ font-size: 13px !important; }
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) .text-\[12px\]   { font-size: 13.5px !important; }
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) .text-\[13px\]   { font-size: 14px !important; }
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) .text-xs         { font-size: 13.5px !important; }
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) .text-sm         { font-size: 15px !important; }
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) .text-lg         { font-size: 22px !important; }
+
+/* KESİLME — bu dilde satırlar daha uzun; sabit yükseklik ve tek-satır
+   kısıtları metni kırpıyordu. Sarmaya izin ver, taşmayı bitir. */
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) .truncate {
+  overflow: visible !important; text-overflow: clip !important; white-space: normal !important;
+}
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) .whitespace-nowrap { white-space: normal !important; }
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) th,
+:is([data-theme="endeks"], [data-theme="endeks-gece"]) td { vertical-align: top; }
+
 /* 2 · Fildişi Atölye — warm ivory + espresso */
 [data-theme="ivory"] {
   --bg: #F3EDE3; --bg-card: #FDFAF6; --bg-hover: #EAE2D5;
