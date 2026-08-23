@@ -33,13 +33,40 @@ interface CustomerRow {
   cancelledCount: number;
   noShowCount: number;
   totalSpent: number;
+  /** Son 12 ayın toplamı — "bu müşteri bana yılda ne kazandırıyor" sorusunun cevabı. */
+  spent12m: number;
+  visits12m: number;
+  /** Ziyaret başına ortalama (12 aylık). Sıklık ile değeri ayıran sayı budur:
+   *  yılda 2 gelip 30.000 bırakan müşteri, 10 gelip 10.000 bırakandan 15× değerlidir. */
+  avgPerVisit: number;
+  /** `paidAmount` taşımayan, dolayısıyla liste fiyatından TAHMİN edilen GEÇMİŞ randevu sayısı.
+   *  Sıfırdan büyükse "kazandırdı" değil "yaklaşık" demek zorundayız. */
+  estimatedCount: number;
+  /** Ciroya giren (geçmiş, iptal olmayan) randevu sayısı — tahmin oranının paydası.
+   *  `totalVisits` gelecek randevuları da içerdiği için payda olarak KULLANILAMAZ. */
+  pastVisitCount: number;
   favoriteService: string;
   lastVisit: string | null;
   nextVisit: string | null;
   nextVisitTime: string | null;
 }
 
-type SortKey = 'name' | 'totalVisits' | 'totalSpent' | 'lastVisit';
+type SortKey = 'name' | 'totalVisits' | 'totalSpent' | 'avgPerVisit' | 'lastVisit';
+
+/** Bir randevunun GERÇEK para karşılığı.
+ *
+ *  `paidAmount` fiilen tahsil edilen tutardır; `SERVICE_PRICES` yalnız liste
+ *  fiyatıdır ve indirim · kısmi ödeme · paket farkı yüzünden gerçekten kazanılan
+ *  paradan sapar. Önceki hâl her zaman liste fiyatını topluyordu, yani ekran
+ *  "kazandığın para" değil "kazanmış olman gereken para" gösteriyordu.
+ *  Gerçek tutar varsa o kullanılır; yoksa liste fiyatına düşülür ve bu düşüş
+ *  `estimatedCount` ile SAYILIR — görünmeyen tahmin, yanlış kesinlik üretir. */
+function appointmentValue(a: Appointment): { value: number; estimated: boolean } {
+  if (typeof a.paidAmount === 'number' && a.paidAmount > 0) {
+    return { value: a.paidAmount, estimated: false };
+  }
+  return { value: SERVICE_PRICES[a.service] ?? 0, estimated: true };
+}
 
 function buildCustomers(appointments: Appointment[]): CustomerRow[] {
   const map = new Map<string, Appointment[]>();
@@ -57,7 +84,42 @@ function buildCustomers(appointments: Appointment[]): CustomerRow[] {
     const cancelled = appts.filter((a) => a.status === 'cancelled');
     const noShows = appts.filter((a) => a.isNoShow);
 
-    const totalSpent = confirmed.reduce((sum, a) => sum + (SERVICE_PRICES[a.service] ?? 0), 0);
+    // Ciro YALNIZ geçmiş randevulardan sayılır. Önceki hâl gelecekteki onaylı
+    // randevuları da topluyordu: yarınki randevu henüz para kazandırmamıştır ve
+    // ödeme kaydı da olmadığı için liste fiyatından tahmin ediliyor, yani hem
+    // ciroyu şişiriyor hem "tahmin payı" uyarısını haksız yere tetikliyordu.
+    // "Bu müşteri bana ne kazandırdı" sorusunun cevabı tahsil edilmiş paradır.
+    // `isNoShow` de dışarıda: müşteri gelmediyse hizmet verilmemiştir, dolayısıyla
+    // para da kazanılmamıştır. Önceki hâl bunları liste fiyatından sayıyordu —
+    // yani gelmeyen müşteri ciroyu YÜKSELTİYORDU. Gelmeme zaten `noShowCount`
+    // sütununda ayrıca görünüyor; iki kez, üstelik ters işaretle sayılmamalı.
+    const gecmisZiyaretler = confirmed.filter(
+      (a) => a.date && !isAfter(parseISO(a.date), today) && !a.isNoShow,
+    );
+    let totalSpent = 0;
+    let estimatedCount = 0;
+    for (const a of gecmisZiyaretler) {
+      const { value, estimated } = appointmentValue(a);
+      totalSpent += value;
+      if (estimated) estimatedCount += 1;
+    }
+
+    // 12 aylık pencere — müşteri "yılda ne kazandırıyor" diye soruyor, "hep birlikte
+    // ne kazandırdı" diye değil. Yıllar önce çok harcamış bir müşteri bugünkü kararı
+    // yanıltır; pencere olmadan liste eskiyi ödüllendirir.
+    const y1Cutoff = new Date(today);
+    y1Cutoff.setFullYear(y1Cutoff.getFullYear() - 1);
+    let spent12m = 0;
+    let visits12m = 0;
+    for (const a of confirmed) {
+      if (!a.date) continue;
+      const d = parseISO(a.date);
+      if (isAfter(d, y1Cutoff) && !isAfter(d, today)) {
+        spent12m += appointmentValue(a).value;
+        visits12m += 1;
+      }
+    }
+    const avgPerVisit = visits12m > 0 ? Math.round(spent12m / visits12m) : 0;
 
     const svcCount: Record<string, number> = {};
     for (const a of confirmed) svcCount[a.service] = (svcCount[a.service] ?? 0) + 1;
@@ -74,10 +136,19 @@ function buildCustomers(appointments: Appointment[]): CustomerRow[] {
     return {
       phone,
       name,
-      totalVisits: confirmed.length,
+      // Ziyaret sayısı = GERÇEKLEŞMİŞ ziyaretler. Önceki hâl gelecekteki randevuyu
+      // da sayıyordu ve ekranda tutarsızlık üretiyordu: "3 ziyaret · ₺30.000"
+      // yazıp yanında "ziyaret başına ₺15.000" demek (30.000/2) birbirini tutmuyor.
+      // Yaklaşan randevu zaten "Sonraki" sütununda görünüyor.
+      totalVisits: gecmisZiyaretler.length,
       cancelledCount: cancelled.length,
       noShowCount: noShows.length,
       totalSpent,
+      spent12m,
+      visits12m,
+      avgPerVisit,
+      estimatedCount,
+      pastVisitCount: gecmisZiyaretler.length,
       favoriteService,
       lastVisit: pastVisits[0]?.date ?? null,
       nextVisit: futureVisits[0]?.date ?? null,
@@ -88,7 +159,11 @@ function buildCustomers(appointments: Appointment[]): CustomerRow[] {
 
 export function CustomerList({ appointments }: Props) {
   const [search, setSearch] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey>('totalVisits');
+  // Varsayılan sıralama DEĞERE göre, sıklığa göre değil (2026-08-23).
+  // Önceki varsayılan `totalVisits`'ti ve listeyi en sık geleni tepeye koyuyordu —
+  // yılda 2 gelip 30.000 bırakan müşteri, 10 gelip 10.000 bırakanın altında kalıyordu.
+  // Saha geri bildirimi bunu birebir tarif etti: "çok gelen değil, çok kazandıran kim?"
+  const [sortKey, setSortKey] = useState<SortKey>('totalSpent');
   const [sortAsc, setSortAsc] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [listOpen, setListOpen] = useState(false);
@@ -146,6 +221,7 @@ export function CustomerList({ appointments }: Props) {
         if (sortKey === 'name') { va = a.name; vb = b.name; }
         else if (sortKey === 'totalVisits') { va = a.totalVisits; vb = b.totalVisits; }
         else if (sortKey === 'totalSpent') { va = a.totalSpent; vb = b.totalSpent; }
+        else if (sortKey === 'avgPerVisit') { va = a.avgPerVisit; vb = b.avgPerVisit; }
         else if (sortKey === 'lastVisit') { va = a.lastVisit ?? ''; vb = b.lastVisit ?? ''; }
         if (va < vb) return sortAsc ? -1 : 1;
         if (va > vb) return sortAsc ? 1 : -1;
@@ -174,8 +250,21 @@ export function CustomerList({ appointments }: Props) {
 
   const totalCustomers = customers.length;
   const activeCustomers = customers.filter((c) => c.totalVisits > 0).length;
-  const vipCustomers = customers.filter((c) => c.totalVisits >= 3).length;
   const totalRevenue = customers.reduce((s, c) => s + c.totalSpent, 0);
+
+  // "En değerli 5 müşteri cironun yüzde kaçı" — listenin tek cümlelik özeti.
+  // Sayı yüksekse (tipik olarak öyledir) işletmenin geliri birkaç kişiye bağlıdır
+  // ve o kişileri ADIYLA bilmek, ortalama müşteriyi bilmekten daha önemlidir.
+  const top5 = [...customers].sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 5);
+  const top5Phones = new Set(top5.map((c) => c.phone));
+  const top5Revenue = top5.reduce((s, c) => s + c.totalSpent, 0);
+  const top5Share = totalRevenue > 0 ? Math.round((top5Revenue / totalRevenue) * 100) : 0;
+
+  // Tahmin payı: tutarların kaçı gerçek tahsilat değil liste fiyatı.
+  // Görünmeyen tahmin yanlış kesinlik üretir — pay yüksekse ekranda söylenir.
+  const estimatedTotal = customers.reduce((s, c) => s + c.estimatedCount, 0);
+  const visitsTotal = customers.reduce((s, c) => s + c.pastVisitCount, 0);
+  const estimatedShare = visitsTotal > 0 ? Math.round((estimatedTotal / visitsTotal) * 100) : 0;
 
   return (
     <div>
@@ -184,7 +273,7 @@ export function CustomerList({ appointments }: Props) {
         {[
           { label: 'Toplam Müşteri', value: totalCustomers, icon: '👥' },
           { label: 'Aktif Müşteri', value: activeCustomers, icon: '✅' },
-          { label: 'VIP (3+ Ziyaret)', value: vipCustomers, icon: '⭐' },
+          { label: 'İlk 5 Müşteri · Ciro Payı', value: `%${top5Share}`, icon: '⭐' },
           { label: 'Toplam Ciro', value: `₺${totalRevenue.toLocaleString('tr-TR')}`, icon: '💰' },
         ].map((s) => (
           <div key={s.label} className="rounded-xl p-3" style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)' }}>
@@ -196,6 +285,15 @@ export function CustomerList({ appointments }: Props) {
           </div>
         ))}
       </div>
+
+      {/* Tutarların ne kadarı gerçek tahsilat, ne kadarı liste fiyatı tahmini.
+          Sessiz tahmin, yanlış kesinlik üretir — pay varsa açıkça yazılır. */}
+      {estimatedShare > 0 && (
+        <p className="text-[11px] mb-4 -mt-2" style={{ color: 'var(--text-3)' }}>
+          Tutarların <span className="tabular-nums" style={{ color: 'var(--amber)' }}>%{estimatedShare}</span>
+          {"'i "}ödeme kaydı olmadığı için liste fiyatından hesaplandı — gerçek tahsilat değil, yaklaşık değer.
+        </p>
+      )}
 
       {/* Toggle button */}
       <button
@@ -246,6 +344,7 @@ export function CustomerList({ appointments }: Props) {
                 { key: 'name' as SortKey, label: 'Müşteri' },
                 { key: 'totalVisits' as SortKey, label: 'Ziyaret' },
                 { key: 'totalSpent' as SortKey, label: 'Harcama' },
+                { key: 'avgPerVisit' as SortKey, label: 'Ziyaret Başına' },
                 { key: 'lastVisit' as SortKey, label: 'Son Ziyaret' },
               ].map(({ key, label }, idx) => (
                 <th
@@ -269,7 +368,11 @@ export function CustomerList({ appointments }: Props) {
           <tbody>
             {filtered.map((c, i) => {
               const isExpanded = expanded === c.phone;
-              const isVip = c.totalVisits >= 3;
+              // Yıldız artık SIKLIKTAN değil DEĞERDEN geliyor. Eski ölçüt
+              // `totalVisits >= 3` idi: sık gelen ama az bırakan müşteriyi
+              // ödüllendiriyor, yılda iki kez gelip en çok parayı bırakanı
+              // işaretsiz bırakıyordu. VIP = ciroya en çok katkı veren ilk 5.
+              const isVip = top5Phones.has(c.phone);
               const customerAppts = appointments.filter((a) => a.customerPhone === c.phone);
 
               return (
@@ -332,6 +435,27 @@ export function CustomerList({ appointments }: Props) {
                       <span className="tabular-nums" style={{ color: 'var(--text-1)', fontFamily: '"Cormorant Garamond", serif', fontSize: '1rem' }}>
                         ₺{c.totalSpent.toLocaleString('tr-TR')}
                       </span>
+                      {c.spent12m > 0 && c.spent12m !== c.totalSpent && (
+                        <div className="text-[11px] tabular-nums" style={{ color: 'var(--text-3)' }}>
+                          son 12 ay: ₺{c.spent12m.toLocaleString('tr-TR')}
+                        </div>
+                      )}
+                    </td>
+                    {/* Sıklık ile değeri ayıran sütun. Dar ekranda gizlenir —
+                        repo kuralı: mobilde isim ve aksiyon önceliklidir. */}
+                    <td className="py-3.5 px-4 hidden md:table-cell">
+                      {c.avgPerVisit > 0 ? (
+                        <>
+                          <span className="tabular-nums" style={{ color: 'var(--gold)', fontFamily: '"Cormorant Garamond", serif', fontSize: '1rem' }}>
+                            ₺{c.avgPerVisit.toLocaleString('tr-TR')}
+                          </span>
+                          <div className="text-[11px] tabular-nums" style={{ color: 'var(--text-3)' }}>
+                            {c.visits12m} ziyaret / yıl
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-xs" style={{ color: 'var(--text-3)' }}>—</span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4">
                       {c.lastVisit ? (
@@ -362,7 +486,7 @@ export function CustomerList({ appointments }: Props) {
                   {/* Expanded detail */}
                   {isExpanded && (
                     <tr>
-                      <td colSpan={5} style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-hover)' }}>
+                      <td colSpan={6} style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-hover)' }}>
                         <div className="px-4 pb-4">
                           {/* Randevu Geçmişi */}
                           <p className="text-[10px] tracking-[0.16em] uppercase mb-2" style={{ color: 'var(--text-3)' }}>
