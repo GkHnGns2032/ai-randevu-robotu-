@@ -169,6 +169,9 @@ export function CustomerList({ appointments }: Props) {
   const [listOpen, setListOpen] = useState(false);
   const [notes, setNotes] = useState<Record<string, CustomerNote[]>>({});
   const [noteLoading, setNoteLoading] = useState<string | null>(null);
+  /** Not eklenemediğinde ekranda GÖRÜNEN sebep. Sessiz başarısızlık, kullanıcıya
+   *  "tıkladım hiçbir şey olmadı" diye görünür — arızanın kendisinden beter. */
+  const [noteError, setNoteError] = useState<string | null>(null);
   const [newNote, setNewNote] = useState('');
   const [newTag, setNewTag] = useState<CustomerTag | ''>('');
 
@@ -189,15 +192,25 @@ export function CustomerList({ appointments }: Props) {
 
   async function handleAddNote(phone: string) {
     if (!newNote.trim()) return;
-    const res = await fetch(`/api/customer/${encodeURIComponent(phone)}/notes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ note: newNote.trim(), tag: newTag || undefined }),
-    });
-    if (res.ok) {
-      setNewNote('');
-      setNewTag('');
-      loadNotes(phone);
+    setNoteError(null);
+    try {
+      const res = await fetch(`/api/customer/${encodeURIComponent(phone)}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: newNote.trim(), tag: newTag || undefined }),
+      });
+      if (res.ok) {
+        setNewNote('');
+        setNewTag('');
+        loadNotes(phone);
+        return;
+      }
+      // Sunucu reddetti — SEBEBİ SÖYLE. Eski hâl `if (res.ok)` deyip sessizce
+      // geçiyordu; not eklenmiyor ama ekranda hiçbir iz kalmıyordu.
+      const govde = await res.json().catch(() => null);
+      setNoteError(govde?.error ?? `Not eklenemedi (sunucu ${res.status}).`);
+    } catch {
+      setNoteError('Not eklenemedi — sunucuya ulaşılamadı.');
     }
   }
 
@@ -636,6 +649,11 @@ export function CustomerList({ appointments }: Props) {
                                 <Plus size={12} />
                               </button>
                             </div>
+                            {noteError && (
+                              <p className="text-[13px] mt-1.5" style={{ color: 'var(--rose)' }}>
+                                {noteError}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </td>

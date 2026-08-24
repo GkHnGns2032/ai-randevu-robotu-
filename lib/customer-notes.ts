@@ -38,12 +38,17 @@ export async function getNotesForCustomer(phone: string): Promise<CustomerNote[]
 }
 
 export async function addNote(phone: string, note: string, tag?: string): Promise<CustomerNote> {
-  const record = await notesTable.create({
+  // `tag` Airtable'da TEK-SEÇİM (single select) bir alan. Boş metin o alanın
+  // seçenekleri arasında OLMADIĞI için `tag: ''` göndermek bütün kaydı reddettirir
+  // (`INVALID_MULTIPLE_CHOICE_OPTIONS`) — yani ETİKETSİZ not hiç eklenemiyordu.
+  // Doğru davranış: etiket yoksa alanı hiç GÖNDERME, boş değerle gönderme.
+  const alanlar: Record<string, string> = {
     customerPhone: phone,
     note,
-    tag: tag ?? '',
     createdAt: new Date().toISOString(),
-  });
+  };
+  if (tag && tag.trim()) alanlar['tag'] = tag.trim();
+  const record = await notesTable.create(alanlar);
   return {
     id: record.id,
     customerPhone: record.fields.customerPhone as string,
