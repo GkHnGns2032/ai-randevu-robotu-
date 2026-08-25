@@ -2,6 +2,39 @@
 
 > En yeni kayıt en üstte. Kanonik şema: vault `GG_AI OS/Systems/Oturum Kapanış Şeması.md`.
 
+## bella — 2026-08-24 (oturum: müşteri notu — etiketsiz not hiç eklenemiyordu)
+
+**Ne yapıldı:** Panoda müşteriye not eklenemiyordu. Airtable'da `tag` TEK-SEÇİM alanı; `addNote`
+etiket seçilmediğinde oraya BOŞ METİN yazıyordu (`tag: tag ?? ''`) ve Airtable kaydın tamamını
+reddediyordu (`INVALID_MULTIPLE_CHOICE_OPTIONS`, POST 500). Gerçek kural: etiket seçersen not
+ekleniyor, seçmezsen hiç eklenmiyor. Etiket boşsa alan artık Airtable'a HİÇ gönderilmiyor.
+
+**Kararlar & neden:**
+- İkinci kusur birincisi kadar önemli sayıldı: `handleAddNote`'ta `if (res.ok)` vardı, `else`
+  yoktu — sunucu reddettiğinde ekranda hiçbir iz kalmıyordu. "Düğme çalışmıyor" hissinin kaynağı
+  bu sessizlikti. Artık sebep formun altında görünüyor ve **yazılan metin alanda korunuyor**.
+- Sınama notları Airtable'dan silindi — demo müşterisinde iz bırakılmadı.
+
+**Durum:** tsc temiz (`npx tsc --noEmit` çıkış 0) · test — · build — · commit `efc6b14` ·
+push **edildi** (`origin/main` ile senkron, ağaç temiz)
+
+**Sırada ne var:** Aynı sessiz-başarısızlık deseni `handleDeleteNote`'ta duruyor — silme
+başarısız olursa da hiçbir şey söylemiyor. Kapatılmadı.
+
+**Açık sorular / riskler:**
+- Airtable `CustomerNotes` tablosunda telefonu ve metni olmayan, yalnız `tag: Yeni` taşıyan bir
+  artık kayıt var (`recQDqI6edA9lSUWx`). Hiçbir müşterinin altında görünmüyor; silinmedi.
+- **Bayat sekme tuzağı:** akşam "yine bozuk" bildirimi geldi; kod ve sunucu doğruydu, sebep
+  düzeltmeden önce açılmış bir sekmenin eski JS'i tutmasıydı. Demo günleri için `next dev` yerine
+  derlenmiş kipte koşmak bu sınıfı tamamen kaldırır — karar verilmedi.
+
+🔖 **Memory delta:** `dogrulamanin-raf-omru` (yeni) · `feedback-preview-fresh-state` (bayat sekme
+yanlış arıza raporu üretir) — ikisi de vault memory'sine YAZILDI, köprüde tekrar işlenmesine
+gerek yok.
+
+🌉 **Köprü notu:** vault tarafına zaten işlendi (`karar-defteri/2026-08-24.md` → "Oturum 2 —
+gündüz bölümü"). Bu kayıt repo tarafı içindir.
+
 ## bella — 2026-08-24 (oturum: saha turu öncesi demo tahkimi — takvim boşluğu + Airtable temizliği)
 
 **Ne yapıldı:** Haftalık takvimde Per/Cum/Cts sütunları boştu — `YAKLASAN` yalnız `0/1/2` gün
